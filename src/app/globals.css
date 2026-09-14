@@ -7,21 +7,21 @@
   --color-surface-muted: #eef0f3;
   --color-surface-sunken: #f1f2f5;
 
-  /* Deep navy — reserved for command-bar / monitoring emphasis sections */
-  --color-navy-950: #0a0e1a;
-  --color-navy-900: #0d1526;
-  --color-navy-800: #131d33;
-  --color-navy-700: #1b2a45;
-  --color-navy-600: #263858;
+  /* Near-black — kaartech.com uses charcoal/black dark sections, not navy blue */
+  --color-navy-950: #0a0a0b;
+  --color-navy-900: #141416;
+  --color-navy-800: #1f1f21;
+  --color-navy-700: #2c2c2f;
+  --color-navy-600: #3d3d40;
 
-  /* KaarTech-inspired magenta accent — restrained use */
-  --color-accent-50: #fdf2f8;
-  --color-accent-100: #fce7f3;
-  --color-accent-200: #fbcfe8;
-  --color-accent-400: #ec4899;
-  --color-accent-500: #d6127a;
-  --color-accent-600: #b30e66;
-  --color-accent-700: #8f0b52;
+  /* KaarTech brand crimson (#9d0102 — sampled from kaartech.com's logo mark and CTA buttons) */
+  --color-accent-50: #fdf2f1;
+  --color-accent-100: #fbe2dc;
+  --color-accent-200: #f0beb8;
+  --color-accent-400: #c81619;
+  --color-accent-500: #9d0102;
+  --color-accent-600: #7c0102;
+  --color-accent-700: #5a0101;
 
   /* Text */
   --color-text-primary: #12141c;
