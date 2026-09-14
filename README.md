@@ -1,36 +1,45 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Sentinel — AI DataOps Command Center
 
-## Getting Started
+An enterprise pipeline observability and remediation platform: pipeline monitoring, AI-powered
+failure investigation, DQ/SLA checks, human-approved automated remediation, post-remediation
+validation, incident lifecycle tracking, and an embedded AI assistant.
 
-First, run the development server:
+Built on realistic mock data behind a service-layer abstraction so it can be pointed at a real
+FastAPI / Databricks backend later without a frontend rewrite.
+
+## Getting started
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Architecture
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+src/
+  types/        Domain model (Pipeline, Incident, DQ, SLA, Remediation, Audit, Chat, Metrics)
+  data/mock/     Realistic fixtures — the only place mock data lives
+  services/      PipelineService, IncidentService, MetricsService, ChatService + apiClient.
+                 Each is an interface with a Mock implementation today; swap in an
+                 Api* implementation later without touching hooks or components.
+  hooks/         Data-fetching hooks (usePipelines, useIncident, useChat, ...) — the
+                 boundary between services and UI.
+  components/    dashboard/ · pipeline/ · incident/ · chat/ · layout/ · common/
+  app/           Next.js App Router pages: /overview, /pipelines, /pipelines/[runId],
+                 /incidents, /incidents/[incidentId], /remediation, /analytics
+```
 
-## Learn More
+**Lifecycle modeled end-to-end:** Detect → Investigate → DQ/SLA → Recommend → Approve
+(human-in-the-loop, required) → Remediate → Validate → Resolve. A successful remediation job
+does **not** automatically mean the incident is resolved — post-remediation DQ/SLA validation
+runs first, and can independently fail (`VALIDATION_FAILED`) even when the job succeeded.
 
-To learn more about Next.js, take a look at the following resources:
+## Connecting a real backend
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Set `NEXT_PUBLIC_API_URL` and implement `Api*Service` classes matching the existing service
+interfaces in `src/services/`. See `src/services/apiClient.ts` for the fetch wrapper and the
+expected REST contract (`GET /api/pipelines`, `GET /api/incidents/{id}`,
+`POST /api/incidents/{id}/approve`, `POST /api/chat`, etc.).
