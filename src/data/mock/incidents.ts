@@ -1,11 +1,26 @@
-import type { Incident } from "@/types";
+import type { DQResult, Incident, Investigation, SLAResult } from "@/types";
+import { summarizeDQ, summarizeSLA } from "@/lib/incidentNarratives";
 
 /**
  * Incident fixtures covering every lifecycle state the product supports:
  * OPEN, INVESTIGATING, WAITING_APPROVAL, APPROVED, REMEDIATING,
  * REMEDIATION_FAILED, VALIDATING, VALIDATION_FAILED, RESOLVED, REJECTED.
+ *
+ * Authored without `processSteps` (Investigation/DQ/SLA) or `summary`
+ * (DQ/SLA) — those are the agent's methodology trail and derived narrative,
+ * the same content a real backend would attach to its response. They're
+ * appended below in one place rather than repeated on every fixture.
  */
-export const MOCK_INCIDENTS: Incident[] = [
+type RawInvestigation = Omit<Investigation, "processSteps">;
+type RawDQResult = Omit<DQResult, "processSteps" | "summary">;
+type RawSLAResult = Omit<SLAResult, "processSteps" | "summary">;
+type RawIncident = Omit<Incident, "investigation" | "dq" | "sla"> & {
+  investigation: RawInvestigation | null;
+  dq: RawDQResult | null;
+  sla: RawSLAResult | null;
+};
+
+const RAW_INCIDENTS: RawIncident[] = [
   // 1. Fresh failure, investigation not yet started.
   {
     incidentId: "INC-6B48D2E7",
@@ -802,3 +817,36 @@ export const MOCK_INCIDENTS: Incident[] = [
     ],
   },
 ];
+
+// The agent's methodology is the same across incidents — only its
+// conclusion differs — so the process trail is a fixed, shared sequence.
+const INVESTIGATION_PROCESS = [
+  "Failure execution identified",
+  "Error details analyzed",
+  "Failure pattern evaluated",
+  "Root cause inferred",
+];
+const DQ_PROCESS = [
+  "Record count checked",
+  "Null values checked",
+  "Duplicate records checked",
+  "Freshness evaluated",
+];
+const SLA_PROCESS = [
+  "Pipeline SLA retrieved",
+  "Execution duration calculated",
+  "Duration compared against threshold",
+];
+
+export const MOCK_INCIDENTS: Incident[] = RAW_INCIDENTS.map((incident) => ({
+  ...incident,
+  investigation: incident.investigation
+    ? { ...incident.investigation, processSteps: INVESTIGATION_PROCESS }
+    : null,
+  dq: incident.dq
+    ? { ...incident.dq, processSteps: DQ_PROCESS, summary: summarizeDQ(incident.dq.checks) }
+    : null,
+  sla: incident.sla
+    ? { ...incident.sla, processSteps: SLA_PROCESS, summary: summarizeSLA(incident.sla) }
+    : null,
+}));

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Bot, X } from "lucide-react";
 import { ChatPanel } from "./ChatPanel";
+import { CHAT_ASSISTANT_NAME } from "@/data/mock/chat";
 
 export function ChatLauncher() {
   const [open, setOpen] = useState(false);
@@ -11,7 +12,7 @@ export function ChatLauncher() {
     <>
       <button
         onClick={() => setOpen((v) => !v)}
-        aria-label={open ? "Close AI DataOps Assistant" : "Open AI DataOps Assistant"}
+        aria-label={open ? `Close ${CHAT_ASSISTANT_NAME}` : `Open ${CHAT_ASSISTANT_NAME}`}
         aria-expanded={open}
         className="fixed bottom-5 right-4 z-50 flex size-14 items-center justify-center rounded-full bg-accent-500 text-white shadow-lg transition-transform hover:scale-105 active:scale-95 sm:right-6"
       >

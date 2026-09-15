@@ -36,7 +36,7 @@ export function Sidebar({ className }: { className?: string }) {
         </div>
         <div className="leading-tight">
           <p className="text-sm font-semibold tracking-tight">Sentinel</p>
-          <p className="text-[10px] font-medium uppercase tracking-wider text-white/40">AI DataOps</p>
+          <p className="text-[10px] font-medium uppercase tracking-wider text-white/40">AI Pipeline</p>
         </div>
       </div>
 

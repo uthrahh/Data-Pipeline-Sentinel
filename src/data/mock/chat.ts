@@ -7,4 +7,4 @@ export const SUGGESTED_PROMPTS: string[] = [
   "What pipelines are currently remediating?",
 ];
 
-export const CHAT_ASSISTANT_NAME = "AI DataOps Assistant";
+export const CHAT_ASSISTANT_NAME = "AI Pipeline Assistant";

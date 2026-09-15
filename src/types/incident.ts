@@ -26,9 +26,16 @@ export interface IncidentFailure {
   runPageUrl: string | null;
 }
 
+/**
+ * `processSteps` is the ordered trail of what the agent actually did to reach
+ * its conclusion; the narrative fields (`rootCause` / `summary`) are what it
+ * concluded. Rendering always keeps these two visually distinct — see
+ * AnalysisSection in components/incident.
+ */
 export interface Investigation {
   status: "PENDING" | "COMPLETE";
   completedAt: string | null;
+  processSteps: string[];
   rootCause: string;
   confidencePct: number;
   evidence: string[];
@@ -47,11 +54,15 @@ export interface DQCheckResult {
 export interface DQResult {
   status: "PENDING" | "COMPLETE" | "NOT_AVAILABLE";
   completedAt: string | null;
+  processSteps: string[];
+  summary: string;
   checks: DQCheckResult[];
 }
 
 export interface SLAResult {
   status: CheckStatus;
+  processSteps: string[];
+  summary: string;
   configuredMinutes: number | null;
   actualMinutes: number | null;
   varianceMinutes: number | null;

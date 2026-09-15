@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Bell, ChevronDown, Menu, Search } from "lucide-react";
+import { ChevronDown, Menu, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { MobileNav } from "./MobileNav";
 
@@ -29,14 +29,6 @@ export function Topbar() {
       </div>
 
       <div className="flex items-center gap-2">
-        <button
-          className="relative flex size-8 items-center justify-center rounded-md text-text-secondary transition-colors hover:bg-surface-muted"
-          aria-label="Notifications"
-        >
-          <Bell className="size-[17px]" />
-          <span className="absolute right-1.5 top-1.5 size-1.5 rounded-full bg-accent-500 ring-2 ring-surface" />
-        </button>
-
         <div className="relative">
           <button
             onClick={() => setUserMenuOpen((v) => !v)}
@@ -64,9 +56,6 @@ export function Topbar() {
                   <p className="text-xs font-medium text-text-primary">J. Datta</p>
                   <p className="text-[11px] text-text-tertiary">j.datta@sentinel.ai</p>
                 </div>
-                <button className="w-full px-3.5 py-2.5 text-left text-xs text-text-secondary hover:bg-surface-muted">
-                  Account settings
-                </button>
                 <button className="w-full px-3.5 py-2.5 text-left text-xs text-text-secondary hover:bg-surface-muted">
                   Sign out
                 </button>

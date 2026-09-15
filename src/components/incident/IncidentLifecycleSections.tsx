@@ -1,15 +1,11 @@
 import type { Incident } from "@/types";
 import { PipelineLifecycle } from "@/components/pipeline/PipelineLifecycle";
 import { FailureDetails } from "@/components/pipeline/FailureDetails";
-import { InvestigationPanel } from "@/components/pipeline/InvestigationPanel";
-import { DQPanel } from "@/components/pipeline/DQPanel";
-import { SLAPanel } from "@/components/pipeline/SLAPanel";
-import { RecommendationPanel } from "@/components/pipeline/RecommendationPanel";
-import { ApprovalPanel } from "@/components/pipeline/ApprovalPanel";
 import { RemediationPanel } from "@/components/pipeline/RemediationPanel";
 import { ValidationPanel } from "@/components/pipeline/ValidationPanel";
 import { AuditTimeline } from "@/components/pipeline/AuditTimeline";
 import { Card, CardBody } from "@/components/common/Card";
+import { IncidentAnalysisPanel } from "./IncidentAnalysisPanel";
 
 interface IncidentLifecycleSectionsProps {
   incident: Incident;
@@ -19,6 +15,13 @@ interface IncidentLifecycleSectionsProps {
   actionError: string | null;
 }
 
+/**
+ * Composes the incident detail story in order: lifecycle position -> what
+ * failed -> AI's analysis and the human decision it produced -> remediation
+ * execution (only once approved) -> post-remediation validation (only once
+ * remediation has run) -> audit trail. Each downstream section is state-aware
+ * and simply omits itself when not yet relevant to `incident.status`.
+ */
 export function IncidentLifecycleSections({
   incident,
   onApprove,
@@ -38,26 +41,13 @@ export function IncidentLifecycleSections({
 
       <FailureDetails incident={incident} />
 
-      {incident.investigation && <InvestigationPanel investigation={incident.investigation} />}
-
-      {(incident.dq || incident.sla) && (
-        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-          {incident.dq && <DQPanel dq={incident.dq} />}
-          {incident.sla && <SLAPanel sla={incident.sla} />}
-        </div>
-      )}
-
-      {incident.recommendation && <RecommendationPanel recommendation={incident.recommendation} />}
-
-      {incident.approval && (
-        <ApprovalPanel
-          incident={incident}
-          onApprove={onApprove}
-          onReject={onReject}
-          isSubmitting={isSubmittingAction}
-          actionError={actionError}
-        />
-      )}
+      <IncidentAnalysisPanel
+        incident={incident}
+        onApprove={onApprove}
+        onReject={onReject}
+        isSubmittingAction={isSubmittingAction}
+        actionError={actionError}
+      />
 
       {incident.remediation && <RemediationPanel remediation={incident.remediation} />}
 

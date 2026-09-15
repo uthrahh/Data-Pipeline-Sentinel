@@ -14,13 +14,12 @@ const ATTENTION_STATUSES = ["OPEN", "INVESTIGATING", "WAITING_APPROVAL", "REMEDI
 export default function OverviewPage() {
   const { data: metrics, isLoading: metricsLoading, error: metricsError, refresh } = useDashboardMetrics();
   const { data: attention } = useIncidents({ status: [...ATTENTION_STATUSES] });
-  const { data: remediating } = useIncidents({ status: ["REMEDIATING"] });
   const { data: recent } = usePipelines({ sortKey: "startTime", sortDirection: "desc", pageSize: 6 });
 
   return (
     <div className="flex flex-col">
       <PageHeader
-        title="DataOps Overview"
+        title="Pipeline Overview"
         description="Consolidated pipeline health across all regions, in UTC."
       />
 
@@ -31,26 +30,14 @@ export default function OverviewPage() {
           <KpiGrid metrics={metrics} isLoading={metricsLoading} />
         )}
 
-        <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
-          <div className="xl:col-span-2">
-            <IncidentQueueCard
-              title="Incidents Needing Attention"
-              description="Open investigations, pending approvals, and failed remediations."
-              incidents={attention.items}
-              emptyTitle="No open incidents"
-              emptyDescription="Every pipeline failure has been investigated, remediated, and resolved."
-              viewAllHref="/incidents"
-            />
-          </div>
-          <IncidentQueueCard
-            title="Active Remediation"
-            description="Approved fixes currently executing."
-            incidents={remediating.items}
-            emptyTitle="Nothing remediating"
-            emptyDescription="No approved fixes are currently in flight."
-            viewAllHref="/remediation"
-          />
-        </div>
+        <IncidentQueueCard
+          title="Incidents Needing Attention"
+          description="Open investigations, pending approvals, and failed remediations."
+          incidents={attention.items}
+          emptyTitle="No open incidents"
+          emptyDescription="Every pipeline failure has been investigated, remediated, and resolved."
+          viewAllHref="/incidents"
+        />
 
         <RecentExecutionsCard executions={recent.items} />
       </div>

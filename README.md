@@ -1,4 +1,4 @@
-# Sentinel — AI DataOps Command Center
+# Sentinel AI Pipeline
 
 An enterprise pipeline observability and remediation platform: pipeline monitoring, AI-powered
 failure investigation, DQ/SLA checks, human-approved automated remediation, post-remediation
@@ -21,6 +21,8 @@ Open [http://localhost:3000](http://localhost:3000).
 ```
 src/
   types/        Domain model (Pipeline, Incident, DQ, SLA, Remediation, Audit, Chat, Metrics)
+  lib/           Pure helpers, incl. incidentNarratives.ts (derives DQ/SLA agent summaries
+                 from check results — the same synthesis a real backend agent would do)
   data/mock/     Realistic fixtures — the only place mock data lives
   services/      PipelineService, IncidentService, MetricsService, ChatService + apiClient.
                  Each is an interface with a Mock implementation today; swap in an

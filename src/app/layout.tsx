@@ -15,7 +15,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Sentinel | AI DataOps Command Center",
+  title: "Sentinel AI Pipeline",
   description:
     "Enterprise pipeline observability, AI-powered investigation, and automated remediation.",
 };

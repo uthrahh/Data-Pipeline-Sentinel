@@ -27,7 +27,7 @@ export function ChatPanel({ onClose }: { onClose: () => void }) {
     <div
       className="fixed bottom-24 right-4 z-50 flex h-[min(640px,calc(100dvh-140px))] w-[min(400px,calc(100vw-32px))] flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-lg animate-slide-up sm:bottom-24 sm:right-6"
       role="dialog"
-      aria-label="AI DataOps Assistant"
+      aria-label={CHAT_ASSISTANT_NAME}
     >
       <div className="flex items-center justify-between gap-3 border-b border-border bg-navy-950 px-4 py-3.5 text-white">
         <div className="flex items-center gap-2.5">
@@ -55,9 +55,9 @@ export function ChatPanel({ onClose }: { onClose: () => void }) {
         {messages.length === 0 ? (
           <div className="flex h-full flex-col justify-between gap-6">
             <div className="space-y-1.5">
-              <p className="text-sm font-medium text-text-primary">Hi — I&apos;m your DataOps copilot.</p>
+              <p className="text-sm font-medium text-text-primary">Hi — I&apos;m your Pipeline copilot.</p>
               <p className="text-xs leading-relaxed text-text-tertiary">
-                Ask me about pipeline failures, DQ/SLA results, approvals, or active remediation.
+                Ask me about pipeline failures, DQ/SLA results, approvals, or remediation.
               </p>
             </div>
             <SuggestedPrompts onSelect={handleSend} />
