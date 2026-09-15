@@ -1,4 +1,5 @@
-import type { CheckStatus, RiskLevel, Severity } from "./common";
+import type { CheckStatus, CountryCode, RiskLevel, Severity } from "./common";
+import type { PipelineId } from "./pipeline";
 
 /**
  * Incident lifecycle. Mirrors the backend state machine:
@@ -115,8 +116,9 @@ export interface AuditEvent {
 export interface Incident {
   incidentId: string;
   pipelineRunId: string;
-  pipelineId: string;
+  pipelineId: PipelineId;
   pipelineName: string;
+  country: CountryCode;
   status: IncidentStatus;
   severity: Severity;
   detectedAt: string;
@@ -136,4 +138,5 @@ export interface IncidentFilters {
   search?: string;
   status?: IncidentStatus[];
   severity?: Severity[];
+  country?: CountryCode[];
 }

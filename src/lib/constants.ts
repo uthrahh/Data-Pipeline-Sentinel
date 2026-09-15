@@ -192,12 +192,3 @@ export const RISK_STYLES: Record<RiskLevel, StatusStyle> = {
 };
 
 export const CURRENT_USER = "J. Datta";
-
-export const REGION_LABELS: Record<string, string> = {
-  NAC: "North America",
-  EU: "Europe",
-  ANZ: "Australia / NZ",
-  AME: "Africa / Middle East",
-  APAC: "Asia Pacific",
-  GLOBAL: "Global",
-};

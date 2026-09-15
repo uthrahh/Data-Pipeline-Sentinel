@@ -4,6 +4,7 @@ import type { PipelineExecution } from "@/types";
 import { PipelineStatusBadge } from "./PipelineStatusBadge";
 import { EmptyState } from "@/components/common/EmptyState";
 import { formatDuration, formatTime } from "@/lib/utils";
+import { getCountryLabel } from "@/config/sapPipelineConfig";
 
 export function RecentExecutionsCard({ executions }: { executions: PipelineExecution[] }) {
   return (
@@ -11,7 +12,7 @@ export function RecentExecutionsCard({ executions }: { executions: PipelineExecu
       <div className="flex items-center justify-between border-b border-border px-5 py-4">
         <div>
           <h3 className="text-sm font-semibold text-text-primary">Recent Pipeline Executions</h3>
-          <p className="mt-0.5 text-xs text-text-tertiary">Most recent runs across all regions, in UTC.</p>
+          <p className="mt-0.5 text-xs text-text-tertiary">Most recent runs across all countries, in UTC.</p>
         </div>
         <Link href="/pipelines" className="flex items-center gap-1 text-xs font-medium text-accent-600 hover:text-accent-700">
           View all pipelines
@@ -32,7 +33,9 @@ export function RecentExecutionsCard({ executions }: { executions: PipelineExecu
                 <PipelineStatusBadge status={exec.status} />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium text-text-primary">{exec.pipelineName}</p>
-                  <p className="mt-0.5 truncate text-xs text-text-tertiary">{exec.trigger.name}</p>
+                  <p className="mt-0.5 truncate text-xs text-text-tertiary">
+                    {getCountryLabel(exec.country)} · {exec.trigger.name}
+                  </p>
                 </div>
                 <div className="shrink-0 text-right">
                   <p className="text-xs font-medium text-text-secondary">{formatTime(exec.startTime)}</p>

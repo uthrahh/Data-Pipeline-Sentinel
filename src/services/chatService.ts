@@ -1,7 +1,9 @@
 import { incidentService } from "./incidentService";
 import { pipelineService } from "./pipelineService";
-import type { ChatMessage, ChatResultCard, ChatToolCall } from "@/types";
+import { sapDataService } from "./sapDataService";
+import type { ChatMessage, ChatQueryResult, ChatResultCard, ChatToolCall } from "@/types";
 import { formatDuration } from "@/lib/utils";
+import { COUNTRIES, PIPELINES } from "@/config/sapPipelineConfig";
 
 function delay<T>(value: T, ms: number): Promise<T> {
   return new Promise((resolve) => setTimeout(() => resolve(value), ms));
@@ -11,16 +13,52 @@ function id(): string {
   return Math.random().toString(36).slice(2, 10);
 }
 
+function extractPipelineId(content: string) {
+  return PIPELINES.find(
+    (p) => content.includes(p.id) || content.includes(p.label.toLowerCase()),
+  );
+}
+
+function extractCountryCode(content: string) {
+  return COUNTRIES.find((c) => new RegExp(`\\b${c.code.toLowerCase()}\\b`).test(content) || content.includes(c.label.toLowerCase()))?.code;
+}
+
+function extractMaterialId(content: string): string | null {
+  const match = content.match(/mat\d{3,}/i);
+  return match ? match[0].toUpperCase() : null;
+}
+
+const IN_SCOPE_KEYWORDS = [
+  "material",
+  "vendor",
+  "procurement",
+  "sales",
+  "manufactur",
+  "gold",
+  "pipeline",
+  "incident",
+  "dq",
+  "quality",
+  "sla",
+  "remediat",
+  "country",
+  "job",
+  "fail",
+  "approv",
+];
+
 export interface ChatService {
   sendMessage(content: string): Promise<{ toolCalls: ChatToolCall[]; reply: ChatMessage }>;
 }
 
 /**
- * Mock implementation — simple intent matching over the same mock service
- * layer the rest of the UI uses, so its answers stay consistent with what's
- * on screen. A future `ApiChatService` would call POST /api/chat and stream
- * back { content, toolCalls, resultCards } from a real backend agent —
- * ChatPanel would not need to change.
+ * Mock implementation — intent matching over the same service layer the
+ * rest of the UI uses (pipelineService, incidentService, sapDataService), so
+ * its answers stay consistent with what's on screen. A future
+ * `ApiChatService` would call POST /api/chat and let a real backend
+ * (Databricks Genie / RAG / SQL) resolve the query, returning the same
+ * { content, toolCalls, resultCards, queryResult } shape — ChatPanel would
+ * not need to change.
  */
 class MockChatService implements ChatService {
   async sendMessage(raw: string): Promise<{ toolCalls: ChatToolCall[]; reply: ChatMessage }> {
@@ -28,8 +66,46 @@ class MockChatService implements ChatService {
     const toolCalls: ChatToolCall[] = [];
     let text = "";
     let cards: ChatResultCard[] = [];
+    let queryResult: ChatQueryResult | undefined;
 
-    if (content.includes("waiting") || content.includes("approval")) {
+    const materialId = extractMaterialId(content);
+    const countryCode = extractCountryCode(content);
+    const pipeline = extractPipelineId(content);
+
+    if (content.includes("vendor") && materialId) {
+      toolCalls.push({ label: `Querying sap_vendor_material for ${materialId}`, status: "done" });
+      queryResult = await sapDataService.getVendorsForMaterial(materialId);
+      text =
+        queryResult.rows.length === 0
+          ? `No vendors are on file for ${materialId} in sap_vendor_material.`
+          : `${queryResult.rows.length} vendor${queryResult.rows.length > 1 ? "s" : ""} supply ${materialId}.`;
+    } else if (content.includes("procurement") && materialId) {
+      toolCalls.push({ label: `Joining material master and procurement data for ${materialId}`, status: "done" });
+      queryResult = await sapDataService.getProcurementForMaterial(materialId);
+      text = `Procurement data for ${materialId}:`;
+    } else if (content.includes("top") && content.includes("material") && content.includes("cost")) {
+      toolCalls.push({ label: "Querying sap_material_master", status: "done" });
+      queryResult = await sapDataService.topMaterialsByStandardCost(5);
+      text = "Top materials by standard cost:";
+    } else if (content.includes("highest sales") || (content.includes("sales quantity") && content.includes("material"))) {
+      toolCalls.push({ label: "Aggregating sap_sales_order_item by material", status: "done" });
+      queryResult = await sapDataService.topMaterialsBySalesQuantity(5);
+      text = "Materials with the highest sales quantity:";
+    } else if (content.includes("sales order") && content.includes("open")) {
+      toolCalls.push({ label: "Querying sap_sales_order_item", status: "done" });
+      queryResult = await sapDataService.getOpenSalesOrders(countryCode);
+      text = countryCode
+        ? `Open sales orders for ${countryCode}:`
+        : "Open sales orders across all countries:";
+    } else if (content.includes("how many") && content.includes("material")) {
+      toolCalls.push({ label: "Counting sap_material_master rows", status: "done" });
+      const count = await sapDataService.getMaterialCount();
+      text = `sap_material_master currently has ${count} records.`;
+    } else if (content.includes("material") && (content.includes("active") || content.includes("what materials") || content.includes("show"))) {
+      toolCalls.push({ label: "Querying sap_material_master", status: "done" });
+      queryResult = await sapDataService.listMaterials(10);
+      text = "Active materials in sap_material_master:";
+    } else if (content.includes("waiting") || content.includes("approval")) {
       toolCalls.push({ label: "Querying incidents awaiting approval", status: "done" });
       const { items } = await incidentService.getIncidents({ status: ["WAITING_APPROVAL"] });
       if (items.length === 0) {
@@ -41,7 +117,7 @@ class MockChatService implements ChatService {
         cards = items.map((i) => ({
           type: "incident",
           title: i.incidentId,
-          subtitle: `${i.pipelineName} — ${i.recommendation?.action ?? "Recommendation pending"}`,
+          subtitle: `${i.pipelineName} (${i.country}) — ${i.recommendation?.action ?? "Recommendation pending"}`,
           status: i.status,
           href: `/incidents/${i.incidentId}`,
         }));
@@ -56,34 +132,34 @@ class MockChatService implements ChatService {
         cards = items.map((i) => ({
           type: "incident",
           title: i.incidentId,
-          subtitle: `${i.pipelineName} — remediation run ${i.remediation?.remediationRunId ?? "pending"}`,
+          subtitle: `${i.pipelineName} (${i.country}) — remediation run ${i.remediation?.remediationRunId ?? "pending"}`,
           status: i.status,
           href: `/incidents/${i.incidentId}`,
         }));
       }
     } else if (content.includes("sla")) {
       toolCalls.push({ label: "Checking SLA results", status: "done" });
-      const pipelineName = extractPipelineName(content);
-      const { items } = await pipelineService.getExecutions({ pageSize: 50 });
-      const match = pipelineName
-        ? items.find((e) => e.pipelineName.toLowerCase().includes(pipelineName))
-        : items.find((e) => e.status === "FAILED" || e.status === "TIMED_OUT");
+      const { items } = await pipelineService.getExecutions({
+        filters: pipeline ? { pipelineId: [pipeline.id] } : undefined,
+        sortKey: "startTime",
+        sortDirection: "desc",
+        pageSize: 50,
+      });
+      const match = countryCode ? items.find((e) => e.country === countryCode) : items[0];
       if (!match) {
         text = "I couldn't find a matching pipeline execution to check SLA against.";
       } else if (!match.slaMinutes) {
-        text = `${match.pipelineName} (run ${match.runId}) has no configured SLA.`;
+        text = `${match.pipelineName} (${match.country}) has no configured SLA.`;
       } else {
         const breached = match.status !== "SUCCESS" || (match.durationMinutes ?? 0) > match.slaMinutes;
-        text = `${match.pipelineName} (run ${match.runId}) ${
+        text = `${match.pipelineName} (${match.country}, run ${match.runId}) ${
           breached ? "did not meet" : "met"
-        } its SLA of ${formatDuration(match.slaMinutes)} — actual duration was ${formatDuration(
-          match.durationMinutes,
-        )}.`;
+        } its SLA of ${formatDuration(match.slaMinutes)} — actual duration was ${formatDuration(match.durationMinutes)}.`;
         cards = [
           {
             type: "pipeline",
             title: match.pipelineName,
-            subtitle: `Run ${match.runId} — ${match.status}`,
+            subtitle: `${match.country} · Run ${match.runId} — ${match.status}`,
             status: match.status,
             href: `/pipelines/${match.runId}`,
           },
@@ -91,15 +167,19 @@ class MockChatService implements ChatService {
       }
     } else if (content.includes("dq") || content.includes("quality")) {
       toolCalls.push({ label: "Running DQ analysis", status: "done" });
-      const pipelineName = extractPipelineName(content);
-      const { items } = await pipelineService.getExecutions({ pageSize: 50 });
-      const match = pipelineName ? items.find((e) => e.pipelineName.toLowerCase().includes(pipelineName)) : items[0];
+      const { items } = await pipelineService.getExecutions({
+        filters: pipeline ? { pipelineId: [pipeline.id] } : undefined,
+        sortKey: "startTime",
+        sortDirection: "desc",
+        pageSize: 50,
+      });
+      const match = countryCode ? items.find((e) => e.country === countryCode) : items[0];
       if (!match) {
         text = "I couldn't find that pipeline to run a DQ analysis against.";
       } else if (match.incidentId) {
         const incident = await incidentService.getIncident(match.incidentId);
         const failCount = incident?.dq?.checks.filter((c) => c.status === "FAIL").length ?? 0;
-        text = `DQ analysis for ${match.pipelineName} (run ${match.runId}): ${
+        text = `DQ analysis for ${match.pipelineName} (${match.country}): ${
           incident?.dq?.checks.length ?? 0
         } checks evaluated, ${failCount} failing.`;
         cards = [
@@ -111,16 +191,16 @@ class MockChatService implements ChatService {
           },
         ];
       } else {
-        text = `${match.pipelineName} (run ${match.runId}) completed with status ${match.status} — no DQ issues were flagged.`;
+        text = `${match.pipelineName} (${match.country}, run ${match.runId}) completed with status ${match.status} — no DQ issues were flagged.`;
         cards = [
-          { type: "pipeline", title: match.pipelineName, subtitle: `Run ${match.runId}`, status: match.status, href: `/pipelines/${match.runId}` },
+          { type: "pipeline", title: match.pipelineName, subtitle: `${match.country} · Run ${match.runId}`, status: match.status, href: `/pipelines/${match.runId}` },
         ];
       }
     } else if (content.includes("why") && content.includes("fail")) {
       toolCalls.push({ label: "Finding the most recent failure", status: "done" });
       toolCalls.push({ label: "Reading AI investigation", status: "done" });
       const { items } = await pipelineService.getExecutions({
-        filters: { status: ["FAILED", "TIMED_OUT"] },
+        filters: { status: ["FAILED", "TIMED_OUT"], pipelineId: pipeline ? [pipeline.id] : undefined },
         pageSize: 1,
       });
       const latest = items[0];
@@ -128,9 +208,10 @@ class MockChatService implements ChatService {
         text = "I couldn't find a recent pipeline failure with a completed investigation.";
       } else {
         const incident = await incidentService.getIncident(latest.incidentId);
-        text = incident?.investigation?.status === "COMPLETE"
-          ? `${latest.pipelineName} (run ${latest.runId}) failed — ${incident.investigation.rootCause}`
-          : `${latest.pipelineName} (run ${latest.runId}) failed. Investigation is still in progress.`;
+        text =
+          incident?.investigation?.status === "COMPLETE"
+            ? `${latest.pipelineName} (${latest.country}) failed — ${incident.investigation.rootCause}`
+            : `${latest.pipelineName} (${latest.country}) failed. Investigation is still in progress.`;
         cards = [
           {
             type: "incident",
@@ -140,38 +221,85 @@ class MockChatService implements ChatService {
           },
         ];
       }
-    } else if (content.includes("failed") && (content.includes("today") || content.includes("pipeline"))) {
-      toolCalls.push({ label: "Querying today's pipeline executions", status: "done" });
-      const { items } = await pipelineService.getExecutions({
-        filters: { status: ["FAILED", "TIMED_OUT"], dateFrom: "2026-09-14T00:00:00Z" },
-        pageSize: 20,
-      });
-      text = items.length === 0 ? "No pipelines have failed today." : `${items.length} pipeline execution${items.length > 1 ? "s" : ""} failed today.`;
+    } else if (content.includes("countr") && content.includes("fail")) {
+      toolCalls.push({ label: "Querying failed pipeline executions by country", status: "done" });
+      const { items } = await pipelineService.getExecutions({ filters: { status: ["FAILED", "TIMED_OUT"] }, pageSize: 50 });
+      const byCountry = new Map<string, number>();
+      for (const e of items) byCountry.set(e.country, (byCountry.get(e.country) ?? 0) + 1);
+      const ranked = Array.from(byCountry.entries()).sort((a, b) => b[1] - a[1]);
+      text =
+        ranked.length === 0
+          ? "No countries currently have failed pipeline executions."
+          : `Failed executions by country: ${ranked.map(([c, n]) => `${c} (${n})`).join(", ")}.`;
+    } else if (countryCode && content.includes("fail")) {
+      toolCalls.push({ label: `Querying failed executions for ${countryCode}`, status: "done" });
+      const { items } = await pipelineService.getExecutions({ filters: { status: ["FAILED", "TIMED_OUT"], country: [countryCode] }, pageSize: 20 });
+      text = items.length === 0 ? `No failed pipeline executions for ${countryCode}.` : `${items.length} failed execution${items.length > 1 ? "s" : ""} for ${countryCode}.`;
       cards = items.slice(0, 5).map((e) => ({
         type: "pipeline",
         title: e.pipelineName,
-        subtitle: `Run ${e.runId} — ${e.trigger.name}`,
+        subtitle: `${e.country} · Run ${e.runId} — ${e.trigger.name}`,
         status: e.status,
         href: `/pipelines/${e.runId}`,
       }));
-    } else {
-      toolCalls.push({ label: "Reviewing platform status", status: "done" });
-      const { items: openIncidents } = await incidentService.getIncidents();
-      const attention = openIncidents.filter((i) =>
-        ["OPEN", "INVESTIGATING", "WAITING_APPROVAL", "REMEDIATION_FAILED", "VALIDATION_FAILED"].includes(i.status),
-      );
-      text =
-        `I can help investigate failures, check DQ/SLA results, and track remediation. ` +
-        `Right now there ${attention.length === 1 ? "is" : "are"} ${attention.length} incident${
-          attention.length === 1 ? "" : "s"
-        } needing attention. Try one of the suggested prompts, or ask about a specific pipeline.`;
-      cards = attention.slice(0, 3).map((i) => ({
-        type: "incident",
-        title: i.incidentId,
-        subtitle: `${i.pipelineName} — ${i.status.replaceAll("_", " ")}`,
-        status: i.status,
-        href: `/incidents/${i.incidentId}`,
+    } else if (content.includes("failed") && (content.includes("today") || content.includes("pipeline") || content.includes("latest"))) {
+      toolCalls.push({ label: "Querying today's pipeline executions", status: "done" });
+      const { items } = await pipelineService.getExecutions({
+        filters: { status: ["FAILED", "TIMED_OUT"] },
+        sortKey: "startTime",
+        sortDirection: "desc",
+        pageSize: content.includes("latest") ? 1 : 20,
+      });
+      text = items.length === 0 ? "No pipelines have failed today." : `${items.length} pipeline execution${items.length > 1 ? "s" : ""} failed.`;
+      cards = items.slice(0, 5).map((e) => ({
+        type: "pipeline",
+        title: e.pipelineName,
+        subtitle: `${e.country} · Run ${e.runId} — ${e.trigger.name}`,
+        status: e.status,
+        href: `/pipelines/${e.runId}`,
       }));
+    } else if (content.includes("gold")) {
+      toolCalls.push({ label: "Querying Gold Integration executions", status: "done" });
+      const { items } = await pipelineService.getExecutions({
+        filters: { pipelineId: ["gold_integration"], country: countryCode ? [countryCode] : undefined },
+        sortKey: "startTime",
+        sortDirection: "desc",
+        pageSize: 1,
+      });
+      const latest = items[0];
+      text = latest
+        ? `Latest Gold Integration run (${latest.country}, run ${latest.runId}): ${latest.status}.`
+        : "I couldn't find a recent Gold Integration execution.";
+      cards = latest
+        ? [{ type: "pipeline", title: latest.pipelineName, subtitle: `${latest.country} · Run ${latest.runId}`, status: latest.status, href: `/pipelines/${latest.runId}` }]
+        : [];
+    } else {
+      const looksLikeDataQuestion = /\btable\b|\bcolumn\b|\bdatabase\b|\bselect\b|\bschema\b/.test(content);
+      const inScope = IN_SCOPE_KEYWORDS.some((k) => content.includes(k));
+
+      if (looksLikeDataQuestion && !inScope) {
+        toolCalls.push({ label: "Checking Sentinel AI Pipeline data scope", status: "done" });
+        text =
+          "That's outside the Sentinel AI Pipeline data scope. I can answer questions about material master, vendor/material, sales orders, and the procurement/sales/gold pipeline tables — try one of the suggested prompts.";
+      } else {
+        toolCalls.push({ label: "Reviewing pipeline status", status: "done" });
+        const { items: openIncidents } = await incidentService.getIncidents();
+        const attention = openIncidents.filter((i) =>
+          ["OPEN", "INVESTIGATING", "WAITING_APPROVAL", "REMEDIATION_FAILED", "VALIDATION_FAILED"].includes(i.status),
+        );
+        text =
+          `I can help with material master, procurement, sales, and Gold Integration data, plus pipeline failures, DQ/SLA, and remediation. ` +
+          `Right now there ${attention.length === 1 ? "is" : "are"} ${attention.length} incident${
+            attention.length === 1 ? "" : "s"
+          } needing attention.`;
+        cards = attention.slice(0, 3).map((i) => ({
+          type: "incident",
+          title: i.incidentId,
+          subtitle: `${i.pipelineName} (${i.country}) — ${i.status.replaceAll("_", " ")}`,
+          status: i.status,
+          href: `/incidents/${i.incidentId}`,
+        }));
+      }
     }
 
     const reply: ChatMessage = {
@@ -179,29 +307,12 @@ class MockChatService implements ChatService {
       role: "assistant",
       content: text,
       timestamp: new Date().toISOString(),
-      resultCards: cards,
+      resultCards: cards.length > 0 ? cards : undefined,
+      queryResult,
     };
 
     return delay({ toolCalls, reply }, 900);
   }
-}
-
-function extractPipelineName(content: string): string | null {
-  const known = [
-    "sales_us_load",
-    "sales_uk_load",
-    "inventory_daily_load",
-    "customer_master_refresh",
-    "product_dimension_load",
-    "finance_fact_load",
-    "marketing_analytics_load",
-    "anz_metcash",
-    "dsr_dachn_accelerate",
-    "dimensions_with_country",
-    "az_vision_store",
-    "pl_extract_images",
-  ];
-  return known.find((name) => content.includes(name)) ?? null;
 }
 
 export const chatService: ChatService = new MockChatService();

@@ -2,7 +2,11 @@
  * Shared primitive types used across the domain model.
  */
 
-export type Region = "NAC" | "EU" | "ANZ" | "AME" | "APAC" | "GLOBAL";
+/**
+ * The four countries this SAP pipeline environment runs in. Fixed by product
+ * scope — see config/sapPipelineConfig.ts for display labels.
+ */
+export type CountryCode = "US" | "CA" | "SG" | "BE";
 
 export type Environment = "PROD" | "UAT" | "DEV";
 

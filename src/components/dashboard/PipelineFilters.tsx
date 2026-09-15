@@ -3,7 +3,7 @@
 import { Search } from "lucide-react";
 import type { PipelineExecutionFilters } from "@/types";
 import { FilterMenu } from "@/components/common/FilterMenu";
-import { REGION_LABELS } from "@/lib/constants";
+import { COUNTRIES, PIPELINES } from "@/config/sapPipelineConfig";
 
 const STATUS_OPTIONS = [
   { value: "SUCCESS", label: "Success" },
@@ -21,7 +21,8 @@ const TRIGGER_OPTIONS = [
   { value: "Dependency", label: "Dependency" },
 ];
 
-const REGION_OPTIONS = Object.entries(REGION_LABELS).map(([value, label]) => ({ value, label }));
+const PIPELINE_OPTIONS = PIPELINES.map((p) => ({ value: p.id, label: p.label }));
+const COUNTRY_OPTIONS = COUNTRIES.map((c) => ({ value: c.code, label: `${c.label} (${c.code})` }));
 
 interface PipelineFiltersProps {
   filters: PipelineExecutionFilters;
@@ -37,7 +38,7 @@ export function PipelineFilters({ filters, onChange, resultCount }: PipelineFilt
         <input
           value={filters.search ?? ""}
           onChange={(e) => onChange({ ...filters, search: e.target.value })}
-          placeholder="Search pipelines, triggers, run IDs…"
+          placeholder="Search pipelines, triggers, execution IDs…"
           className="w-full bg-transparent text-xs text-text-primary outline-none placeholder:text-text-tertiary"
         />
       </div>
@@ -49,10 +50,16 @@ export function PipelineFilters({ filters, onChange, resultCount }: PipelineFilt
         onChange={(v) => onChange({ ...filters, status: v as PipelineExecutionFilters["status"] })}
       />
       <FilterMenu
-        label="Region"
-        options={REGION_OPTIONS}
-        selected={filters.region ?? []}
-        onChange={(v) => onChange({ ...filters, region: v as PipelineExecutionFilters["region"] })}
+        label="Pipeline"
+        options={PIPELINE_OPTIONS}
+        selected={filters.pipelineId ?? []}
+        onChange={(v) => onChange({ ...filters, pipelineId: v as PipelineExecutionFilters["pipelineId"] })}
+      />
+      <FilterMenu
+        label="Country"
+        options={COUNTRY_OPTIONS}
+        selected={filters.country ?? []}
+        onChange={(v) => onChange({ ...filters, country: v as PipelineExecutionFilters["country"] })}
       />
       <FilterMenu
         label="Trigger"

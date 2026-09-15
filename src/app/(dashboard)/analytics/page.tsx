@@ -8,6 +8,7 @@ import { LoadingState } from "@/components/common/LoadingState";
 import { ExecutionTrendChart } from "@/components/analytics/ExecutionTrendChart";
 import { HealthCalendar, type DayHealth } from "@/components/analytics/HealthCalendar";
 import { BarChart3, CalendarDays } from "lucide-react";
+import { getPipeline } from "@/config/sapPipelineConfig";
 
 export default function AnalyticsPage() {
   const { data, isLoading } = usePipelines({ pageSize: 200, sortKey: "startTime", sortDirection: "asc" });
@@ -55,7 +56,7 @@ export default function AnalyticsPage() {
 
   return (
     <div className="flex flex-col">
-      <PageHeader title="Analytics" description="Trends and pipeline health over the trailing week." />
+      <PageHeader title="Analytics" description="SAP pipeline execution trends and health over the trailing week." />
 
       <div className="flex flex-col gap-5 p-4 sm:p-6">
         <Card>
@@ -71,7 +72,12 @@ export default function AnalyticsPage() {
             {isLoading ? (
               <LoadingState className="py-12" />
             ) : (
-              <HealthCalendar pipelines={pipelines} dates={dates} cellStatus={statusOf} />
+              <HealthCalendar
+                pipelines={pipelines}
+                dates={dates}
+                cellStatus={statusOf}
+                pipelineLabel={(id) => getPipeline(id)?.label ?? id}
+              />
             )}
           </CardBody>
         </Card>

@@ -4,10 +4,13 @@ import { KpiCard } from "./KpiCard";
 import { KpiCardSkeleton } from "@/components/common/LoadingState";
 import { formatDuration, formatNumber, formatPercent } from "@/lib/utils";
 
+// Five cards, one row on desktop (lg+) — only stacks on tablet/mobile.
+const GRID_CLASSES = "grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5";
+
 export function KpiGrid({ metrics, isLoading }: { metrics: DashboardMetrics | null; isLoading: boolean }) {
   if (isLoading || !metrics) {
     return (
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
+      <div className={GRID_CLASSES}>
         {Array.from({ length: 5 }).map((_, i) => (
           <KpiCardSkeleton key={i} />
         ))}
@@ -16,9 +19,9 @@ export function KpiGrid({ metrics, isLoading }: { metrics: DashboardMetrics | nu
   }
 
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
+    <div className={GRID_CLASSES}>
       <KpiCard
-        label="Total Executions"
+        label="Total Pipeline Executions"
         value={formatNumber(metrics.totalExecutions.value)}
         deltaPct={metrics.totalExecutions.deltaPct}
         supportingText="vs. yesterday"
@@ -36,7 +39,7 @@ export function KpiGrid({ metrics, isLoading }: { metrics: DashboardMetrics | nu
         accent="danger"
       />
       <KpiCard
-        label="Success Rate"
+        label="Pipeline Success Rate"
         value={formatPercent(metrics.successRatePct.value)}
         deltaPct={metrics.successRatePct.deltaPct}
         supportingText="rolling 24h"
@@ -44,14 +47,14 @@ export function KpiGrid({ metrics, isLoading }: { metrics: DashboardMetrics | nu
         accent="success"
       />
       <KpiCard
-        label="Max Run Duration"
+        label="Max Pipeline Run Duration"
         value={formatDuration(metrics.maxDurationMinutes)}
         supportingText="longest execution today"
         icon={Timer}
         accent="neutral"
       />
       <KpiCard
-        label="Avg Run Duration"
+        label="Average Pipeline Run Duration"
         value={formatDuration(metrics.avgDurationMinutes.value)}
         deltaPct={metrics.avgDurationMinutes.deltaPct}
         deltaIsGood={false}

@@ -1,7 +1,7 @@
 import type { PipelineExecution } from "@/types";
 import { PipelineStatusBadge } from "@/components/dashboard/PipelineStatusBadge";
 import { formatDateTime, formatDuration } from "@/lib/utils";
-import { REGION_LABELS } from "@/lib/constants";
+import { getCountryLabel, getJobForPipeline } from "@/config/sapPipelineConfig";
 
 function Field({ label, value }: { label: string; value: React.ReactNode }) {
   return (
@@ -13,6 +13,8 @@ function Field({ label, value }: { label: string; value: React.ReactNode }) {
 }
 
 export function PipelineHeader({ execution }: { execution: PipelineExecution }) {
+  const job = getJobForPipeline(execution.pipelineId);
+
   return (
     <div className="rounded-xl border border-border bg-surface p-5">
       <div className="flex flex-wrap items-center gap-3">
@@ -22,14 +24,15 @@ export function PipelineHeader({ execution }: { execution: PipelineExecution }) 
           {execution.environment}
         </span>
       </div>
+      {job && <p className="mt-1 text-xs text-text-tertiary">{job.label}</p>}
 
-      <div className="mt-5 grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3 lg:grid-cols-6">
-        <Field label="Run ID" value={<span className="font-mono text-xs">{execution.runId}</span>} />
+      <div className="mt-5 grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-4 lg:grid-cols-7">
+        <Field label="Execution ID" value={<span className="font-mono text-xs">{execution.runId}</span>} />
+        <Field label="Country" value={getCountryLabel(execution.country)} />
         <Field label="Trigger" value={execution.trigger.name} />
         <Field label="Started" value={formatDateTime(execution.startTime)} />
         <Field label="Ended" value={formatDateTime(execution.endTime)} />
         <Field label="Duration" value={formatDuration(execution.durationMinutes)} />
-        <Field label="Region" value={REGION_LABELS[execution.region] ?? execution.region} />
       </div>
     </div>
   );

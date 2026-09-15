@@ -3,6 +3,7 @@
 import { Search } from "lucide-react";
 import type { IncidentFilters as IncidentFiltersType } from "@/types";
 import { FilterMenu } from "@/components/common/FilterMenu";
+import { COUNTRIES } from "@/config/sapPipelineConfig";
 
 const STATUS_OPTIONS = [
   { value: "OPEN", label: "Open" },
@@ -23,6 +24,8 @@ const SEVERITY_OPTIONS = [
   { value: "MEDIUM", label: "Medium" },
   { value: "LOW", label: "Low" },
 ];
+
+const COUNTRY_OPTIONS = COUNTRIES.map((c) => ({ value: c.code, label: `${c.label} (${c.code})` }));
 
 export function IncidentFilters({
   filters,
@@ -55,6 +58,12 @@ export function IncidentFilters({
         options={SEVERITY_OPTIONS}
         selected={filters.severity ?? []}
         onChange={(v) => onChange({ ...filters, severity: v as IncidentFiltersType["severity"] })}
+      />
+      <FilterMenu
+        label="Country"
+        options={COUNTRY_OPTIONS}
+        selected={filters.country ?? []}
+        onChange={(v) => onChange({ ...filters, country: v as IncidentFiltersType["country"] })}
       />
       {resultCount !== undefined && (
         <span className="ml-auto text-xs text-text-tertiary">

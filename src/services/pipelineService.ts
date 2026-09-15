@@ -10,7 +10,6 @@ function delay<T>(value: T, ms = SIMULATED_LATENCY_MS): Promise<T> {
 export interface PipelineService {
   getExecutions(query?: PipelineExecutionQuery): Promise<Paginated<PipelineExecution>>;
   getExecution(runId: string): Promise<PipelineExecution | null>;
-  getRegions(): Promise<string[]>;
 }
 
 /**
@@ -40,8 +39,11 @@ class MockPipelineService implements PipelineService {
     if (filters?.status && filters.status.length > 0) {
       items = items.filter((e) => filters.status!.includes(e.status));
     }
-    if (filters?.region && filters.region.length > 0) {
-      items = items.filter((e) => filters.region!.includes(e.region));
+    if (filters?.country && filters.country.length > 0) {
+      items = items.filter((e) => filters.country!.includes(e.country));
+    }
+    if (filters?.pipelineId && filters.pipelineId.length > 0) {
+      items = items.filter((e) => filters.pipelineId!.includes(e.pipelineId));
     }
     if (filters?.environment && filters.environment.length > 0) {
       items = items.filter((e) => filters.environment!.includes(e.environment));
@@ -80,10 +82,6 @@ class MockPipelineService implements PipelineService {
 
   async getExecution(runId: string): Promise<PipelineExecution | null> {
     return delay(this.data.find((e) => e.runId === runId) ?? null);
-  }
-
-  async getRegions(): Promise<string[]> {
-    return delay(Array.from(new Set(this.data.map((e) => e.region))).sort());
   }
 }
 

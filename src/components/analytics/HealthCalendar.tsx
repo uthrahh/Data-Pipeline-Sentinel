@@ -6,6 +6,7 @@ interface HealthCalendarProps {
   pipelines: string[];
   dates: string[];
   cellStatus: (pipeline: string, date: string) => DayHealth;
+  pipelineLabel?: (pipeline: string) => string;
 }
 
 const CELL_STYLES: Record<DayHealth, string> = {
@@ -15,7 +16,7 @@ const CELL_STYLES: Record<DayHealth, string> = {
   none: "bg-surface-muted",
 };
 
-export function HealthCalendar({ pipelines, dates, cellStatus }: HealthCalendarProps) {
+export function HealthCalendar({ pipelines, dates, cellStatus, pipelineLabel = (p) => p }: HealthCalendarProps) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full min-w-[760px] border-collapse text-left text-xs">
@@ -35,7 +36,7 @@ export function HealthCalendar({ pipelines, dates, cellStatus }: HealthCalendarP
           {pipelines.map((pipeline) => (
             <tr key={pipeline} className="border-t border-border">
               <td className="sticky left-0 z-10 whitespace-nowrap bg-surface px-4 py-2 font-medium text-text-primary">
-                {pipeline}
+                {pipelineLabel(pipeline)}
               </td>
               {dates.map((d) => {
                 const status = cellStatus(pipeline, d);

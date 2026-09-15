@@ -55,9 +55,9 @@ export function ChatPanel({ onClose }: { onClose: () => void }) {
         {messages.length === 0 ? (
           <div className="flex h-full flex-col justify-between gap-6">
             <div className="space-y-1.5">
-              <p className="text-sm font-medium text-text-primary">Hi — I&apos;m your Pipeline copilot.</p>
+              <p className="text-sm font-medium text-text-primary">Hi — I&apos;m your SAP pipeline copilot.</p>
               <p className="text-xs leading-relaxed text-text-tertiary">
-                Ask me about pipeline failures, DQ/SLA results, approvals, or remediation.
+                Ask me about material master, vendors, sales orders, Gold Integration, or pipeline failures, DQ/SLA, and remediation.
               </p>
             </div>
             <SuggestedPrompts onSelect={handleSend} />

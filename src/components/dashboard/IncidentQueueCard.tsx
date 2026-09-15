@@ -5,6 +5,7 @@ import { INCIDENT_STATUS_STYLES, SEVERITY_STYLES } from "@/lib/constants";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { EmptyState } from "@/components/common/EmptyState";
 import { formatRelativeTime } from "@/lib/utils";
+import { getCountryLabel } from "@/config/sapPipelineConfig";
 import { CheckCircle2 } from "lucide-react";
 
 export function IncidentQueueCard({
@@ -54,6 +55,7 @@ export function IncidentQueueCard({
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <p className="truncate text-sm font-medium text-text-primary">{incident.pipelineName}</p>
+                    <span className="shrink-0 text-[11px] text-text-tertiary">{getCountryLabel(incident.country)}</span>
                     <span className="shrink-0 font-mono text-[10px] text-text-tertiary">{incident.incidentId}</span>
                   </div>
                   <p className="mt-0.5 truncate text-xs text-text-tertiary">

@@ -42,8 +42,8 @@ export default function PipelinesPage() {
   return (
     <div className="flex flex-col">
       <PageHeader
-        title="All Pipeline Executions"
-        description="Every pipeline run across all regions and environments, in UTC."
+        title="Pipeline Executions"
+        description="Every Material Master, Procurement, Sales, and Gold Integration run, across all countries and environments, in UTC."
       />
 
       <div className="p-4 sm:p-6">

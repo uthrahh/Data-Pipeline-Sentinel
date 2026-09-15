@@ -21,7 +21,7 @@ export function Topbar() {
         </button>
         <div className="hidden items-center gap-2 rounded-lg border border-border bg-surface-subtle px-3 py-1.5 text-xs text-text-tertiary sm:flex">
           <Search className="size-3.5" />
-          <span>Search pipelines, incidents, run IDs…</span>
+          <span>Search pipelines, incidents, execution IDs…</span>
           <kbd className="ml-6 rounded border border-border-strong bg-surface px-1.5 py-0.5 font-mono text-[10px] text-text-tertiary">
             ⌘K
           </kbd>

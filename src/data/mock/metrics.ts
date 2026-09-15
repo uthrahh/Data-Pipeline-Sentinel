@@ -13,7 +13,7 @@ function trend(value: number, deltaPct: number | null): TrendValue {
 export function buildDashboardMetrics(
   executions: PipelineExecution[],
   incidents: Incident[],
-  referenceDate: string = "2026-09-14",
+  referenceDate: string = "2026-09-15",
 ): DashboardMetrics {
   const today = executions.filter((e) => e.startTime.startsWith(referenceDate));
   const failed = today.filter((e) => e.status === "FAILED" || e.status === "TIMED_OUT");

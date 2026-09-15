@@ -55,6 +55,9 @@ class MockIncidentService implements IncidentService {
     if (filters.severity && filters.severity.length > 0) {
       items = items.filter((i) => filters.severity!.includes(i.severity));
     }
+    if (filters.country && filters.country.length > 0) {
+      items = items.filter((i) => filters.country!.includes(i.country));
+    }
 
     items.sort((a, b) => (a.detectedAt < b.detectedAt ? 1 : -1));
 

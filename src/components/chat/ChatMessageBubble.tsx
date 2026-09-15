@@ -2,6 +2,7 @@ import { Bot, Wrench } from "lucide-react";
 import type { ChatMessage } from "@/types";
 import { cn, formatTime } from "@/lib/utils";
 import { ChatResultCard } from "./ChatResultCard";
+import { ChatQueryResultTable } from "./ChatQueryResultTable";
 
 export function ChatMessageBubble({ message }: { message: ChatMessage }) {
   const isUser = message.role === "user";
@@ -43,6 +44,11 @@ export function ChatMessageBubble({ message }: { message: ChatMessage }) {
             <div className={cn("max-w-full rounded-2xl rounded-tl-sm bg-surface-muted px-3.5 py-2.5 text-sm text-text-primary")}>
               {message.content}
             </div>
+            {message.queryResult && (
+              <div className="pt-0.5">
+                <ChatQueryResultTable result={message.queryResult} />
+              </div>
+            )}
             {message.resultCards && message.resultCards.length > 0 && (
               <div className="space-y-1.5 pt-0.5">
                 {message.resultCards.map((card, i) => (

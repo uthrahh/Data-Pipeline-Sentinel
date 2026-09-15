@@ -10,6 +10,19 @@ export interface ChatResultCard {
   href: string;
 }
 
+/**
+ * A structured tabular answer to a data question (material master, vendor
+ * pricing, sales orders, ...). Rendered as a table rather than prose so the
+ * frontend stays extensible when the mock lookup is replaced by a real
+ * Databricks SQL / Genie response carrying the same shape.
+ */
+export interface ChatQueryResult {
+  sourceTable: string;
+  columns: string[];
+  rows: (string | number)[][];
+  generatedSql?: string;
+}
+
 export interface ChatToolCall {
   label: string;
   status: "running" | "done";
@@ -23,6 +36,7 @@ export interface ChatMessage {
   isLoading?: boolean;
   toolCalls?: ChatToolCall[];
   resultCards?: ChatResultCard[];
+  queryResult?: ChatQueryResult;
 }
 
 export interface ChatSession {

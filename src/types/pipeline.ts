@@ -1,4 +1,4 @@
-import type { Environment, Region } from "./common";
+import type { CountryCode, Environment } from "./common";
 
 export type PipelineExecutionStatus =
   | "SUCCESS"
@@ -10,12 +10,20 @@ export type PipelineExecutionStatus =
 
 export type TriggerType = "Scheduled" | "Manual" | "Event" | "Dependency";
 
-export type ExecutionType =
-  | "DatabricksNotebook"
-  | "DatabricksJob"
-  | "DataFactoryPipeline"
-  | "LogicApp"
-  | "SqlWarehouse";
+/** The three Databricks jobs that make up the SAP pipeline ecosystem. */
+export type JobId = "job1_material_master" | "job2_procurement_sales" | "job3_gold_integration";
+
+/**
+ * The four processing units a pipeline execution can belong to. Job 2 runs
+ * two of these (procurement_processing, sales_processing) as parallel
+ * branches — see config/sapPipelineConfig.ts for the job/notebook/table
+ * mapping every other part of the app resolves this id against.
+ */
+export type PipelineId =
+  | "material_master_processing"
+  | "procurement_processing"
+  | "sales_processing"
+  | "gold_integration";
 
 export interface PipelineTrigger {
   type: TriggerType;
@@ -23,23 +31,23 @@ export interface PipelineTrigger {
 }
 
 /**
- * A single execution (run) of a pipeline. Rows in the "All Pipeline Executions"
- * table and the subject of the pipeline detail page are PipelineExecution records.
+ * A single execution (run) of a pipeline. Rows in the "Pipeline Executions"
+ * table and the subject of the pipeline detail page are PipelineExecution
+ * records. Job, notebook, and source/target tables are intentionally NOT
+ * stored here — they're resolved from `pipelineId` via sapPipelineConfig so
+ * that config is the single source of truth for the SAP architecture.
  */
 export interface PipelineExecution {
   runId: string;
-  pipelineId: string;
+  pipelineId: PipelineId;
   pipelineName: string;
   status: PipelineExecutionStatus;
   trigger: PipelineTrigger;
   startTime: string;
   endTime: string | null;
   durationMinutes: number | null;
-  region: Region;
-  country: string | null;
+  country: CountryCode;
   environment: Environment;
-  executionType: ExecutionType;
-  activityName: string;
   owner: string | null;
   slaMinutes: number | null;
   errorCode: string | null;
@@ -50,7 +58,8 @@ export interface PipelineExecution {
 export interface PipelineExecutionFilters {
   search?: string;
   status?: PipelineExecutionStatus[];
-  region?: Region[];
+  country?: CountryCode[];
+  pipelineId?: PipelineId[];
   triggerType?: TriggerType[];
   environment?: Environment[];
   excludeManualTriggers?: boolean;
