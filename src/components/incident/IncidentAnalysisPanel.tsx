@@ -30,7 +30,7 @@ export function IncidentAnalysisPanel({
     <Card>
       <CardHeader
         title="Incident Analysis"
-        description="AI investigation, data quality, and SLA validation"
+        description="Investigation, data quality, and SLA — each handled by a dedicated agent"
         icon={<ClipboardCheck className="size-4" />}
       />
       <div className="divide-y divide-border">

@@ -1,3 +1,16 @@
+/**
+ * The five specialized agents behind Sentinel AI Pipeline. Sections and
+ * actions in the UI are attributed to the agent that produced them via
+ * `config/agentConfig.ts` — components never hardcode an agent's name.
+ */
+export type AgentId = "genie" | "issue_investigation" | "sla_monitoring" | "data_quality" | "action";
+
+export interface AgentDefinition {
+  id: AgentId;
+  name: string;
+  role: string;
+}
+
 export type ChatRole = "user" | "assistant";
 
 export type ChatResultCardType = "pipeline" | "incident" | "metric";

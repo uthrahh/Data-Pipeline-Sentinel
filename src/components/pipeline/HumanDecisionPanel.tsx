@@ -6,6 +6,7 @@ import type { Incident } from "@/types";
 import { Button } from "@/components/common/Button";
 import { Modal } from "@/components/common/Modal";
 import { StatusBadge } from "@/components/common/StatusBadge";
+import { AgentBadge } from "@/components/common/AgentBadge";
 import { RISK_STYLES, CURRENT_USER } from "@/lib/constants";
 import { formatDateTime } from "@/lib/utils";
 
@@ -33,9 +34,12 @@ export function HumanDecisionPanel({ incident, onApprove, onReject, isSubmitting
 
   return (
     <div>
-      <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-text-primary">
-        <ShieldCheck className="size-4 text-text-tertiary" />
-        Let AI remediate this?
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 text-sm font-semibold text-text-primary">
+          <ShieldCheck className="size-4 text-text-tertiary" />
+          Let AI remediate this?
+        </div>
+        <AgentBadge agentId="action" />
       </div>
 
       {decision === "APPROVED" ? (

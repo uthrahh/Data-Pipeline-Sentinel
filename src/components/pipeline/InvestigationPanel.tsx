@@ -2,6 +2,7 @@ import { BrainCircuit, ListChecks } from "lucide-react";
 import type { Investigation } from "@/types";
 import { LoadingState } from "@/components/common/LoadingState";
 import { ProcessTrail } from "@/components/common/ProcessTrail";
+import { AgentBadge } from "@/components/common/AgentBadge";
 import { cn } from "@/lib/utils";
 
 function ConfidenceMeter({ pct }: { pct: number }) {
@@ -23,9 +24,12 @@ function ConfidenceMeter({ pct }: { pct: number }) {
 export function InvestigationPanel({ investigation }: { investigation: Investigation }) {
   return (
     <div>
-      <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-text-primary">
-        <BrainCircuit className="size-4 text-text-tertiary" />
-        AI Investigation
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 text-sm font-semibold text-text-primary">
+          <BrainCircuit className="size-4 text-text-tertiary" />
+          AI Investigation
+        </div>
+        <AgentBadge agentId="issue_investigation" />
       </div>
 
       {investigation.status === "PENDING" ? (

@@ -8,5 +8,3 @@ export const SUGGESTED_PROMPTS: string[] = [
   "Which incidents are waiting for approval?",
   "Did the latest Gold Integration meet its SLA?",
 ];
-
-export const CHAT_ASSISTANT_NAME = "Sentinel AI Pipeline Assistant";

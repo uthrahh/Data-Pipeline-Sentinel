@@ -5,6 +5,7 @@ import { Wrench } from "lucide-react";
 import type { Remediation } from "@/types";
 import { Card, CardBody, CardHeader } from "@/components/common/Card";
 import { StatusBadge } from "@/components/common/StatusBadge";
+import { AgentBadge } from "@/components/common/AgentBadge";
 import { REMEDIATION_STATUS_STYLES } from "@/lib/constants";
 import { formatDateTime } from "@/lib/utils";
 
@@ -23,9 +24,14 @@ function useElapsedSeconds(startIso: string, running: boolean): number {
 }
 
 function formatElapsed(seconds: number): string {
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  return `${m}m ${s.toString().padStart(2, "0")}s`;
+  const days = Math.floor(seconds / 86400);
+  const hours = Math.floor((seconds % 86400) / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const secs = seconds % 60;
+
+  if (days > 0) return `${days}d ${hours}h ${minutes}m`;
+  if (hours > 0) return `${hours}h ${minutes}m ${secs.toString().padStart(2, "0")}s`;
+  return `${minutes}m ${secs.toString().padStart(2, "0")}s`;
 }
 
 export function RemediationPanel({ remediation }: { remediation: Remediation }) {
@@ -37,7 +43,12 @@ export function RemediationPanel({ remediation }: { remediation: Remediation }) 
       <CardHeader
         title="Remediation"
         icon={<Wrench className="size-4" />}
-        action={<StatusBadge style={REMEDIATION_STATUS_STYLES[remediation.status]} pulse={running} />}
+        action={
+          <div className="flex items-center gap-2">
+            <AgentBadge agentId="action" />
+            <StatusBadge style={REMEDIATION_STATUS_STYLES[remediation.status]} pulse={running} />
+          </div>
+        }
       />
       <CardBody>
         {running && (

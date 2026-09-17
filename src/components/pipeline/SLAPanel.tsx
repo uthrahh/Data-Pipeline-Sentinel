@@ -3,6 +3,7 @@ import type { SLAResult } from "@/types";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { EmptyState } from "@/components/common/EmptyState";
 import { ProcessTrail } from "@/components/common/ProcessTrail";
+import { AgentBadge } from "@/components/common/AgentBadge";
 import { CHECK_STATUS_STYLES, SEVERITY_STYLES } from "@/lib/constants";
 import { formatDuration } from "@/lib/utils";
 
@@ -18,7 +19,10 @@ export function SLAPanel({ sla }: { sla: SLAResult }) {
           <Clock className="size-4 text-text-tertiary" />
           SLA
         </div>
-        {sla.status !== "NOT_AVAILABLE" && <StatusBadge style={CHECK_STATUS_STYLES[sla.status]} />}
+        <div className="flex items-center gap-2">
+          <AgentBadge agentId="sla_monitoring" />
+          {sla.status !== "NOT_AVAILABLE" && <StatusBadge style={CHECK_STATUS_STYLES[sla.status]} />}
+        </div>
       </div>
 
       {sla.status === "NOT_AVAILABLE" ? (

@@ -5,7 +5,9 @@ import { Bot, SendHorizontal, X } from "lucide-react";
 import { useChat } from "@/hooks/useChat";
 import { ChatMessageBubble } from "./ChatMessageBubble";
 import { SuggestedPrompts } from "./SuggestedPrompts";
-import { CHAT_ASSISTANT_NAME } from "@/data/mock/chat";
+import { AGENTS } from "@/config/agentConfig";
+
+const GENIE = AGENTS.genie;
 
 export function ChatPanel({ onClose }: { onClose: () => void }) {
   const { messages, sendMessage, isSending } = useChat();
@@ -27,7 +29,7 @@ export function ChatPanel({ onClose }: { onClose: () => void }) {
     <div
       className="fixed bottom-24 right-4 z-50 flex h-[min(640px,calc(100dvh-140px))] w-[min(400px,calc(100vw-32px))] flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-lg animate-slide-up sm:bottom-24 sm:right-6"
       role="dialog"
-      aria-label={CHAT_ASSISTANT_NAME}
+      aria-label={GENIE.name}
     >
       <div className="flex items-center justify-between gap-3 border-b border-border bg-navy-950 px-4 py-3.5 text-white">
         <div className="flex items-center gap-2.5">
@@ -35,10 +37,10 @@ export function ChatPanel({ onClose }: { onClose: () => void }) {
             <Bot className="size-4" />
           </div>
           <div>
-            <p className="text-sm font-semibold leading-tight">{CHAT_ASSISTANT_NAME}</p>
+            <p className="text-sm font-semibold leading-tight">Genie</p>
             <p className="flex items-center gap-1 text-[11px] text-white/60">
               <span className="size-1.5 rounded-full bg-success-500" />
-              Connected · Ready
+              {GENIE.name} · Connected
             </p>
           </div>
         </div>
@@ -55,7 +57,7 @@ export function ChatPanel({ onClose }: { onClose: () => void }) {
         {messages.length === 0 ? (
           <div className="flex h-full flex-col justify-between gap-6">
             <div className="space-y-1.5">
-              <p className="text-sm font-medium text-text-primary">Hi — I&apos;m your SAP pipeline copilot.</p>
+              <p className="text-sm font-medium text-text-primary">Hi — I&apos;m Genie, your SAP pipeline assistant.</p>
               <p className="text-xs leading-relaxed text-text-tertiary">
                 Ask me about material master, vendors, sales orders, Gold Integration, or pipeline failures, DQ/SLA, and remediation.
               </p>

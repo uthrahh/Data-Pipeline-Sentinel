@@ -4,6 +4,7 @@ import { StatusBadge } from "@/components/common/StatusBadge";
 import { LoadingState } from "@/components/common/LoadingState";
 import { EmptyState } from "@/components/common/EmptyState";
 import { ProcessTrail } from "@/components/common/ProcessTrail";
+import { AgentBadge } from "@/components/common/AgentBadge";
 import { CHECK_STATUS_STYLES } from "@/lib/constants";
 
 /**
@@ -13,9 +14,12 @@ import { CHECK_STATUS_STYLES } from "@/lib/constants";
 export function DQPanel({ dq }: { dq: DQResult }) {
   return (
     <div>
-      <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-text-primary">
-        <DatabaseZap className="size-4 text-text-tertiary" />
-        Data Quality
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 text-sm font-semibold text-text-primary">
+          <DatabaseZap className="size-4 text-text-tertiary" />
+          Data Quality
+        </div>
+        <AgentBadge agentId="data_quality" />
       </div>
 
       {dq.status === "PENDING" ? (
