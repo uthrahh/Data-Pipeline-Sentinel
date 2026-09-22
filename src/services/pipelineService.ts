@@ -1,5 +1,6 @@
 import { MOCK_PIPELINE_EXECUTIONS } from "@/data/mock/pipelines";
 import { apiClient } from "@/services/apiClient";
+import { USE_LIVE_API } from "@/lib/liveMode";
 import type {
   Paginated,
   PipelineExecution,
@@ -212,8 +213,6 @@ class ApiPipelineService implements PipelineService {
     return all.find((e) => e.runId === runId) ?? null;
   }
 }
-
-const USE_LIVE_API = process.env.NEXT_PUBLIC_USE_LIVE_API === "true";
 
 export const pipelineService: PipelineService = USE_LIVE_API
   ? new ApiPipelineService()

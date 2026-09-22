@@ -9,6 +9,7 @@ import { ExecutionTrendChart } from "@/components/analytics/ExecutionTrendChart"
 import { HealthCalendar, type DayHealth } from "@/components/analytics/HealthCalendar";
 import { BarChart3, CalendarDays } from "lucide-react";
 import { getPipeline } from "@/config/sapPipelineConfig";
+import { USE_LIVE_API } from "@/lib/liveMode";
 
 export default function AnalyticsPage() {
   const { data, isLoading } = usePipelines({ pageSize: 200, sortKey: "startTime", sortDirection: "asc" });
@@ -30,15 +31,17 @@ export default function AnalyticsPage() {
       }));
   }, [data.items]);
 
-  const { pipelines, dates, statusOf } = useMemo(() => {
+  const { pipelines, dates, statusOf, pipelineNames } = useMemo(() => {
     const pipelineSet = new Set<string>();
     const dateSet = new Set<string>();
     const map = new Map<string, DayHealth>();
+    const names = new Map<string, string>();
 
     for (const e of data.items) {
       const date = e.startTime.slice(0, 10);
       pipelineSet.add(e.pipelineId);
       dateSet.add(date);
+      names.set(e.pipelineId, e.pipelineName);
       const key = `${e.pipelineId}__${date}`;
       const existing = map.get(key);
       const value: DayHealth =
@@ -51,12 +54,20 @@ export default function AnalyticsPage() {
       pipelines: Array.from(pipelineSet).sort(),
       dates: Array.from(dateSet).sort(),
       statusOf: (pipeline: string, date: string): DayHealth => map.get(`${pipeline}__${date}`) ?? "none",
+      pipelineNames: names,
     };
   }, [data.items]);
 
   return (
     <div className="flex flex-col">
-      <PageHeader title="Analytics" description="SAP pipeline execution trends and health over the trailing week." />
+      <PageHeader
+        title="Analytics"
+        description={
+          USE_LIVE_API
+            ? "Pipeline execution trends and health over the trailing week, from the connected Databricks workspace."
+            : "SAP pipeline execution trends and health over the trailing week."
+        }
+      />
 
       <div className="flex flex-col gap-5 p-4 sm:p-6">
         <Card>
@@ -76,7 +87,7 @@ export default function AnalyticsPage() {
                 pipelines={pipelines}
                 dates={dates}
                 cellStatus={statusOf}
-                pipelineLabel={(id) => getPipeline(id)?.label ?? id}
+                pipelineLabel={(id) => pipelineNames.get(id) ?? getPipeline(id)?.label ?? id}
               />
             )}
           </CardBody>

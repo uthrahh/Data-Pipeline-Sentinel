@@ -2,6 +2,7 @@ import { buildDashboardMetrics } from "@/data/mock/metrics";
 import { MOCK_INCIDENTS } from "@/data/mock/incidents";
 import { MOCK_PIPELINE_EXECUTIONS } from "@/data/mock/pipelines";
 import { apiClient } from "@/services/apiClient";
+import { USE_LIVE_API } from "@/lib/liveMode";
 import type { DashboardMetrics, TrendValue } from "@/types";
 
 const SIMULATED_LATENCY_MS = 220;
@@ -71,8 +72,6 @@ class ApiMetricsService implements MetricsService {
     };
   }
 }
-
-const USE_LIVE_API = process.env.NEXT_PUBLIC_USE_LIVE_API === "true";
 
 export const metricsService: MetricsService = USE_LIVE_API
   ? new ApiMetricsService()

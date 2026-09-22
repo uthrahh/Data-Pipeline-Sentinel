@@ -11,8 +11,10 @@ import { RecentExecutionsCard } from "@/components/dashboard/RecentExecutionsCar
 import { ErrorState } from "@/components/common/ErrorState";
 import { Card, CardHeader } from "@/components/common/Card";
 import { PipelineDependencyDiagram } from "@/components/pipeline/PipelineDependencyDiagram";
+import { LiveJobsSummary } from "@/components/pipeline/LiveJobsSummary";
 import { Workflow } from "lucide-react";
 import type { PipelineId } from "@/types";
+import { USE_LIVE_API } from "@/lib/liveMode";
 
 const ATTENTION_STATUSES = ["OPEN", "INVESTIGATING", "WAITING_APPROVAL", "REMEDIATION_FAILED", "VALIDATION_FAILED"] as const;
 
@@ -30,7 +32,11 @@ export default function OverviewPage() {
     <div className="flex flex-col">
       <PageHeader
         title="Pipeline Overview"
-        description="Health of the SAP material, procurement, sales, and gold integration pipeline, across all countries, in UTC."
+        description={
+          USE_LIVE_API
+            ? "Health of every pipeline in the connected Databricks workspace, in UTC."
+            : "Health of the SAP material, procurement, sales, and gold integration pipeline, across all countries, in UTC."
+        }
       />
 
       <div className="flex flex-col gap-5 p-4 sm:p-6">
@@ -40,23 +46,45 @@ export default function OverviewPage() {
           <KpiGrid metrics={metrics} isLoading={metricsLoading} />
         )}
 
-        <Card>
-          <CardHeader
-            title="Pipeline Dependency"
-            description="Job 1 feeds Job 2's two branches; both must succeed before Job 3 writes the gold table."
-            icon={<Workflow className="size-4" />}
-          />
-          <PipelineDependencyDiagram attentionPipelineIds={attentionPipelineIds} />
-        </Card>
+        {USE_LIVE_API ? (
+          <Card>
+            <CardHeader
+              title="Databricks Jobs"
+              description="Latest run status of every job in the connected workspace."
+              icon={<Workflow className="size-4" />}
+            />
+            <LiveJobsSummary />
+          </Card>
+        ) : (
+          <Card>
+            <CardHeader
+              title="Pipeline Dependency"
+              description="Job 1 feeds Job 2's two branches; both must succeed before Job 3 writes the gold table."
+              icon={<Workflow className="size-4" />}
+            />
+            <PipelineDependencyDiagram attentionPipelineIds={attentionPipelineIds} />
+          </Card>
+        )}
 
-        <IncidentQueueCard
-          title="Incidents Needing Attention"
-          description="Open investigations, pending approvals, and failed remediations."
-          incidents={attention.items}
-          emptyTitle="No open incidents"
-          emptyDescription="Every pipeline failure has been investigated, remediated, and resolved."
-          viewAllHref="/incidents"
-        />
+        {USE_LIVE_API ? (
+          <IncidentQueueCard
+            title="Incidents Needing Attention"
+            description="Pending a Databricks Unity Catalog permission (USE CATALOG on ai_dataops_poc) — not shown until that's granted."
+            incidents={[]}
+            emptyTitle="Live incident data isn't available yet"
+            emptyDescription="Requesting USE CATALOG on ai_dataops_poc will unblock this — see /api/incidents/active."
+            viewAllHref="/incidents"
+          />
+        ) : (
+          <IncidentQueueCard
+            title="Incidents Needing Attention"
+            description="Open investigations, pending approvals, and failed remediations."
+            incidents={attention.items}
+            emptyTitle="No open incidents"
+            emptyDescription="Every pipeline failure has been investigated, remediated, and resolved."
+            viewAllHref="/incidents"
+          />
+        )}
 
         <RecentExecutionsCard executions={recent.items} />
       </div>

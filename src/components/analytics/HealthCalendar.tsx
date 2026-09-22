@@ -43,7 +43,7 @@ export function HealthCalendar({ pipelines, dates, cellStatus, pipelineLabel = (
                 return (
                   <td key={d} className="px-0.5 py-2 text-center">
                     <span
-                      title={`${pipeline} — ${d} — ${status}`}
+                      title={`${pipelineLabel(pipeline)} — ${d} — ${status}`}
                       className={cn("mx-auto block size-4 rounded-[4px]", CELL_STYLES[status])}
                     />
                   </td>
