@@ -4,9 +4,6 @@ import { useIncidents } from "@/hooks/useIncidents";
 import { PageHeader } from "@/components/common/PageHeader";
 import { IncidentQueueCard } from "@/components/dashboard/IncidentQueueCard";
 import { LoadingState } from "@/components/common/LoadingState";
-import { EmptyState } from "@/components/common/EmptyState";
-import { USE_LIVE_API } from "@/lib/liveMode";
-import { ShieldAlert } from "lucide-react";
 
 export default function RemediationPage() {
   const { data, isLoading } = useIncidents();
@@ -24,16 +21,7 @@ export default function RemediationPage() {
       />
 
       <div className="flex flex-col gap-5 p-4 sm:p-6">
-        {USE_LIVE_API ? (
-          <div className="overflow-hidden rounded-xl border border-border bg-surface">
-            <EmptyState
-              icon={ShieldAlert}
-              title="Live remediation data isn't available yet"
-              description="Remediation history comes from the same ai_dataops_poc.dataops.agent_incidents table as the Incidents page, which needs a USE CATALOG grant that hasn't been applied yet."
-              className="py-16"
-            />
-          </div>
-        ) : isLoading ? (
+        {isLoading ? (
           <LoadingState label="Loading remediation activity…" className="py-16" />
         ) : (
           <>

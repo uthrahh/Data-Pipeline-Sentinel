@@ -30,12 +30,13 @@ export function IncidentLifecycleSections({
   actionError,
 }: IncidentLifecycleSectionsProps) {
   const showValidation = incident.status === "VALIDATING" || incident.postValidation !== null;
+  const hasAgentAnalysis = Boolean(incident.investigation || incident.dq || incident.sla || incident.recommendation);
 
   return (
     <div className="space-y-5">
       <Card>
         <CardBody>
-          <PipelineLifecycle status={incident.status} />
+          <PipelineLifecycle status={incident.status} hasAgentAnalysis={hasAgentAnalysis} />
         </CardBody>
       </Card>
 

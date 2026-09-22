@@ -66,25 +66,14 @@ export default function OverviewPage() {
           </Card>
         )}
 
-        {USE_LIVE_API ? (
-          <IncidentQueueCard
-            title="Incidents Needing Attention"
-            description="Pending a Databricks Unity Catalog permission (USE CATALOG on ai_dataops_poc) — not shown until that's granted."
-            incidents={[]}
-            emptyTitle="Live incident data isn't available yet"
-            emptyDescription="Requesting USE CATALOG on ai_dataops_poc will unblock this — see /api/incidents/active."
-            viewAllHref="/incidents"
-          />
-        ) : (
-          <IncidentQueueCard
-            title="Incidents Needing Attention"
-            description="Open investigations, pending approvals, and failed remediations."
-            incidents={attention.items}
-            emptyTitle="No open incidents"
-            emptyDescription="Every pipeline failure has been investigated, remediated, and resolved."
-            viewAllHref="/incidents"
-          />
-        )}
+        <IncidentQueueCard
+          title="Incidents Needing Attention"
+          description="Open investigations, pending approvals, and failed remediations."
+          incidents={attention.items}
+          emptyTitle="No open incidents"
+          emptyDescription="Every pipeline failure has been investigated, remediated, and resolved."
+          viewAllHref="/incidents"
+        />
 
         <RecentExecutionsCard executions={recent.items} />
       </div>

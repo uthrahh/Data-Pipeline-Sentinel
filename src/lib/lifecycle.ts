@@ -35,7 +35,7 @@ const STEP_LABELS: Record<(typeof STEP_ORDER)[number], string> = {
  * lifecycle, producing a per-step visual state (complete / current / failed /
  * stopped / pending) for the stepper.
  */
-export function getLifecycleSteps(status: IncidentStatus): LifecycleStep[] {
+export function getLifecycleSteps(status: IncidentStatus, hasAgentAnalysis: boolean = true): LifecycleStep[] {
   const reachedIndex: Record<IncidentStatus, number> = {
     OPEN: 1,
     INVESTIGATING: 3,
@@ -62,7 +62,7 @@ export function getLifecycleSteps(status: IncidentStatus): LifecycleStep[] {
   const failIdx = failedAt[status];
   const stopIdx = stoppedAt[status];
 
-  return STEP_ORDER.map((key, i) => {
+  const allSteps = STEP_ORDER.map((key, i) => {
     let state: StepState = "pending";
     if (failIdx !== undefined && i === failIdx) state = "failed";
     else if (stopIdx !== undefined && i === stopIdx) state = "stopped";
@@ -73,4 +73,13 @@ export function getLifecycleSteps(status: IncidentStatus): LifecycleStep[] {
 
     return { key, label: STEP_LABELS[key], state };
   });
+
+  // Without a real investigation/DQ/SLA/recommendation agent behind this
+  // incident, don't show those steps as "complete" — that would imply
+  // analysis happened that didn't. Drop them from the sequence entirely.
+  if (!hasAgentAnalysis) {
+    return allSteps.filter((s) => !["investigating", "dq_sla", "recommendation"].includes(s.key));
+  }
+
+  return allSteps;
 }

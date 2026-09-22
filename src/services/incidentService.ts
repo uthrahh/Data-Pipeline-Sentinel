@@ -1,5 +1,17 @@
 import { MOCK_INCIDENTS } from "@/data/mock/incidents";
-import type { AuditEvent, Incident, IncidentFilters, Paginated } from "@/types";
+import { apiClient } from "@/services/apiClient";
+import { USE_LIVE_API } from "@/lib/liveMode";
+import type {
+  Approval,
+  AuditEvent,
+  Incident,
+  IncidentFilters,
+  IncidentStatus,
+  Paginated,
+  Remediation,
+  RemediationRunStatus,
+  Severity,
+} from "@/types";
 
 const SIMULATED_LATENCY_MS = 260;
 
@@ -56,7 +68,7 @@ class MockIncidentService implements IncidentService {
       items = items.filter((i) => filters.severity!.includes(i.severity));
     }
     if (filters.country && filters.country.length > 0) {
-      items = items.filter((i) => filters.country!.includes(i.country));
+      items = items.filter((i) => i.country !== undefined && filters.country!.includes(i.country));
     }
 
     items.sort((a, b) => (a.detectedAt < b.detectedAt ? 1 : -1));
@@ -161,4 +173,201 @@ class MockIncidentService implements IncidentService {
   }
 }
 
-export const incidentService: IncidentService = new MockIncidentService();
+/** Raw row shape returned by the sentinel-backend's incidents endpoints — see
+ * services/incidents_service.py in that repo for exactly how these are derived. */
+interface RawIncidentRow {
+  incident_id: string;
+  job_id: number;
+  job_name: string | null;
+  run_id: number;
+  run_page_url: string | null;
+  error_message: string | null;
+  error_type: string | null;
+  result_state: string | null;
+  severity: string | null;
+  detected_at: string;
+  status: string;
+  approved_by: string | null;
+  approved_at: string | null;
+  rejection_reason: string | null;
+  remediation_run_id: number | null;
+  remediation_status: string | null;
+  remediation_started_at: string | null;
+  remediation_completed_at: string | null;
+  updated_at: string;
+}
+
+interface IncidentsListResponse {
+  success: boolean;
+  data: { incidents: RawIncidentRow[]; count: number };
+}
+
+interface IncidentDetailResponse {
+  success: boolean;
+  data: RawIncidentRow;
+}
+
+function mapApproval(row: RawIncidentRow): Approval {
+  return {
+    requestedAt: row.detected_at,
+    decidedAt: row.approved_at,
+    decidedBy: row.approved_by,
+    decision: row.status === "REJECTED" ? "REJECTED" : row.approved_at ? "APPROVED" : null,
+    rejectionReason: row.rejection_reason,
+  };
+}
+
+function mapRemediation(row: RawIncidentRow): Remediation | null {
+  if (!row.remediation_run_id) return null;
+  const status = (row.remediation_status ?? "PENDING") as RemediationRunStatus;
+  return {
+    remediationRunId: String(row.remediation_run_id),
+    originalRunId: String(row.run_id),
+    startedAt: row.remediation_started_at ?? row.approved_at ?? row.detected_at,
+    completedAt: row.remediation_completed_at,
+    status,
+    error: status === "FAILED" ? row.error_message : null,
+  };
+}
+
+function mapAudit(row: RawIncidentRow): AuditEvent[] {
+  const events: AuditEvent[] = [
+    {
+      id: `${row.incident_id}-detected`,
+      timestamp: row.detected_at,
+      label: "Failure detected",
+      actor: "system",
+      detail: row.error_message,
+    },
+  ];
+  if (row.status === "REJECTED") {
+    events.push({
+      id: `${row.incident_id}-rejected`,
+      timestamp: row.approved_at ?? row.updated_at,
+      label: "Rejected",
+      actor: "human",
+      detail: row.rejection_reason ?? `Rejected by ${row.approved_by ?? "unknown"}.`,
+    });
+  } else if (row.approved_at) {
+    events.push({
+      id: `${row.incident_id}-approved`,
+      timestamp: row.approved_at,
+      label: "Approved",
+      actor: "human",
+      detail: `Approved by ${row.approved_by ?? "unknown"}.`,
+    });
+  }
+  if (row.remediation_started_at) {
+    events.push({
+      id: `${row.incident_id}-remediation-started`,
+      timestamp: row.remediation_started_at,
+      label: "Remediation started",
+      actor: "system",
+      detail: `Job re-triggered (run ${row.remediation_run_id}).`,
+    });
+  }
+  if (row.remediation_completed_at) {
+    events.push({
+      id: `${row.incident_id}-remediation-done`,
+      timestamp: row.remediation_completed_at,
+      label: row.status === "RESOLVED" ? "Remediation succeeded" : "Remediation failed",
+      actor: "system",
+      detail: row.status === "RESOLVED" ? "Rerun completed successfully." : row.error_message,
+    });
+  }
+  return events;
+}
+
+function mapIncident(row: RawIncidentRow): Incident {
+  return {
+    incidentId: row.incident_id,
+    pipelineRunId: String(row.run_id),
+    pipelineId: String(row.job_id),
+    pipelineName: row.job_name ?? `Job ${row.job_id}`,
+    status: row.status as IncidentStatus,
+    severity: (row.severity ?? "MEDIUM") as Severity,
+    detectedAt: row.detected_at,
+    assignee: null,
+    failure: {
+      errorCode: row.result_state ?? "UNKNOWN",
+      errorType: (row.error_type as Incident["failure"]["errorType"]) ?? "SystemError",
+      errorMessage: row.error_message ?? "No error message reported.",
+      target: null,
+      runPageUrl: row.run_page_url,
+    },
+    investigation: null,
+    dq: null,
+    sla: null,
+    recommendation: null,
+    approval: mapApproval(row),
+    remediation: mapRemediation(row),
+    postValidation: null,
+    audit: mapAudit(row),
+  };
+}
+
+/**
+ * Live implementation — calls the sentinel-backend's incidents endpoints.
+ * No LLM investigation/DQ/SLA/recommendation narrative (see mapIncident):
+ * an incident here is a real failed Databricks run, and remediation is a
+ * real job rerun triggered via the Jobs API.
+ */
+class ApiIncidentService implements IncidentService {
+  async getIncidents(filters: IncidentFilters = {}): Promise<Paginated<Incident>> {
+    const res = await apiClient.get<IncidentsListResponse>("/api/incidents/history");
+    let items = res.data.incidents.map(mapIncident);
+
+    if (filters.search) {
+      const q = filters.search.toLowerCase();
+      items = items.filter(
+        (i) =>
+          i.pipelineName.toLowerCase().includes(q) ||
+          i.incidentId.toLowerCase().includes(q) ||
+          i.failure.errorMessage.toLowerCase().includes(q),
+      );
+    }
+    if (filters.status && filters.status.length > 0) {
+      items = items.filter((i) => filters.status!.includes(i.status));
+    }
+    if (filters.severity && filters.severity.length > 0) {
+      items = items.filter((i) => filters.severity!.includes(i.severity));
+    }
+
+    return { items, total: items.length, page: 1, pageSize: items.length || 1 };
+  }
+
+  async getIncident(incidentId: string): Promise<Incident | null> {
+    try {
+      const res = await apiClient.get<IncidentDetailResponse>(`/api/incidents/${incidentId}`);
+      return mapIncident(res.data);
+    } catch {
+      return null;
+    }
+  }
+
+  async getIncidentByRunId(runId: string): Promise<Incident | null> {
+    try {
+      const res = await apiClient.get<IncidentDetailResponse>(`/api/incidents/by-run/${runId}`);
+      return mapIncident(res.data);
+    } catch {
+      return null;
+    }
+  }
+
+  async approveIncident(incidentId: string, decidedBy: string): Promise<Incident> {
+    const res = await apiClient.post<IncidentDetailResponse>(`/api/incidents/${incidentId}/approve`, {
+      approved_by: decidedBy,
+    });
+    return mapIncident(res.data);
+  }
+
+  async rejectIncident(incidentId: string, decidedBy: string, reason: string): Promise<Incident> {
+    const res = await apiClient.post<IncidentDetailResponse>(`/api/incidents/${incidentId}/reject`, {
+      rejected_by: decidedBy,
+      reason,
+    });
+    return mapIncident(res.data);
+  }
+}
+
+export const incidentService: IncidentService = USE_LIVE_API ? new ApiIncidentService() : new MockIncidentService();

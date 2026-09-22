@@ -39,8 +39,8 @@ function StepIcon({ state }: { state: StepState }) {
   return null;
 }
 
-export function PipelineLifecycle({ status }: { status: IncidentStatus }) {
-  const steps = getLifecycleSteps(status);
+export function PipelineLifecycle({ status, hasAgentAnalysis = true }: { status: IncidentStatus; hasAgentAnalysis?: boolean }) {
+  const steps = getLifecycleSteps(status, hasAgentAnalysis);
 
   return (
     <div className="w-full overflow-x-auto pb-1">

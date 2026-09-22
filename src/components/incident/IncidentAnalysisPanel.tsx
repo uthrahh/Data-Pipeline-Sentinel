@@ -26,11 +26,17 @@ export function IncidentAnalysisPanel({
   isSubmittingAction,
   actionError,
 }: IncidentAnalysisPanelProps) {
+  const hasAgentAnalysis = Boolean(incident.investigation || incident.dq || incident.sla);
+
   return (
     <Card>
       <CardHeader
         title="Incident Analysis"
-        description="Investigation, data quality, and SLA — each handled by a dedicated agent"
+        description={
+          hasAgentAnalysis
+            ? "Investigation, data quality, and SLA — each handled by a dedicated agent"
+            : "No automated investigation, DQ, or SLA analysis for this incident — remediation is a direct rerun."
+        }
         icon={<ClipboardCheck className="size-4" />}
       />
       <div className="divide-y divide-border">
@@ -49,7 +55,7 @@ export function IncidentAnalysisPanel({
             <SLAPanel sla={incident.sla} />
           </div>
         )}
-        {incident.approval && incident.recommendation && (
+        {incident.approval && (
           <div className="px-5 py-5">
             <HumanDecisionPanel
               incident={incident}

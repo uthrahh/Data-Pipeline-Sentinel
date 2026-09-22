@@ -28,7 +28,7 @@ export function HumanDecisionPanel({ incident, onApprove, onReject, isSubmitting
   const [reason, setReason] = useState("");
 
   const { recommendation, approval } = incident;
-  if (!approval || !recommendation) return null;
+  if (!approval) return null;
 
   const { decision, decidedAt, decidedBy, rejectionReason } = approval;
 
@@ -61,17 +61,25 @@ export function HumanDecisionPanel({ incident, onApprove, onReject, isSubmitting
         </div>
       ) : (
         <div className="space-y-4">
-          <div className="flex items-start justify-between gap-3 rounded-lg border border-border bg-surface-subtle px-4 py-3">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-text-tertiary">AI Recommends</p>
-              <p className="mt-1 text-sm font-medium text-text-primary">{recommendation.action}</p>
-              <p className="mt-1 text-sm text-text-secondary">{recommendation.reason}</p>
+          {recommendation ? (
+            <div className="flex items-start justify-between gap-3 rounded-lg border border-border bg-surface-subtle px-4 py-3">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-text-tertiary">AI Recommends</p>
+                <p className="mt-1 text-sm font-medium text-text-primary">{recommendation.action}</p>
+                <p className="mt-1 text-sm text-text-secondary">{recommendation.reason}</p>
+              </div>
+              <div className="flex shrink-0 flex-col items-end gap-1.5">
+                <StatusBadge style={RISK_STYLES[recommendation.risk]} />
+                <span className="text-[11px] text-text-tertiary">{recommendation.confidencePct}% confidence</span>
+              </div>
             </div>
-            <div className="flex shrink-0 flex-col items-end gap-1.5">
-              <StatusBadge style={RISK_STYLES[recommendation.risk]} />
-              <span className="text-[11px] text-text-tertiary">{recommendation.confidencePct}% confidence</span>
+          ) : (
+            <div className="rounded-lg border border-border bg-surface-subtle px-4 py-3">
+              <p className="text-sm text-text-secondary">
+                No automated diagnosis is available for this failure. Approving will re-run the job as-is.
+              </p>
             </div>
-          </div>
+          )}
 
           <p className="text-sm leading-relaxed text-text-secondary">
             <span className="font-medium text-text-primary">Human approval is required before remediation runs</span> — nothing

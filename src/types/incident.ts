@@ -118,7 +118,8 @@ export interface Incident {
   pipelineRunId: string;
   pipelineId: PipelineId;
   pipelineName: string;
-  country: CountryCode;
+  /** Not sourced from live Databricks data — present only on mock incidents. */
+  country?: CountryCode;
   status: IncidentStatus;
   severity: Severity;
   detectedAt: string;
