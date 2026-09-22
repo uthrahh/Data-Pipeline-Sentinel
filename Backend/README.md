@@ -1,8 +1,8 @@
 # Sentinel Pipeline Backend
 
 Minimal, purpose-built FastAPI backend for the Sentinel AI Pipeline frontend
-(`../Data Pipeline Sentinel`). Every response is backed by real Databricks
-data — no mocks, no LLM agents, no fabricated narrative.
+(`../Frontend`). Every response is backed by real Databricks data — no
+mocks, no LLM agents, no fabricated narrative.
 
 ## What this is (and isn't)
 
@@ -64,7 +64,7 @@ After deploying, the app's URL (shown in the Databricks Apps UI, or via
 
 ## Frontend wiring
 
-In `Data Pipeline Sentinel/.env.local`:
+In `Frontend/.env.local`:
 ```
 NEXT_PUBLIC_API_URL=http://localhost:8000        # or the deployed Databricks App URL
 NEXT_PUBLIC_USE_LIVE_API=true
