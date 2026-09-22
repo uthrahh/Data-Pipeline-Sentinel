@@ -225,7 +225,10 @@ class MockChatService implements ChatService {
       toolCalls.push({ label: "Querying failed pipeline executions by country", status: "done" });
       const { items } = await pipelineService.getExecutions({ filters: { status: ["FAILED", "TIMED_OUT"] }, pageSize: 50 });
       const byCountry = new Map<string, number>();
-      for (const e of items) byCountry.set(e.country, (byCountry.get(e.country) ?? 0) + 1);
+      for (const e of items) {
+        const c = e.country ?? "UNKNOWN";
+        byCountry.set(c, (byCountry.get(c) ?? 0) + 1);
+      }
       const ranked = Array.from(byCountry.entries()).sort((a, b) => b[1] - a[1]);
       text =
         ranked.length === 0

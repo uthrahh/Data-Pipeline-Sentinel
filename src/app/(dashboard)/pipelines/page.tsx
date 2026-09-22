@@ -43,7 +43,7 @@ export default function PipelinesPage() {
     <div className="flex flex-col">
       <PageHeader
         title="Pipeline Executions"
-        description="Every Material Master, Procurement, Sales, and Gold Integration run, across all countries and environments, in UTC."
+        description="Every pipeline run tracked by the connected Databricks workspace, in UTC."
       />
 
       <div className="p-4 sm:p-6">

@@ -10,20 +10,20 @@ export type PipelineExecutionStatus =
 
 export type TriggerType = "Scheduled" | "Manual" | "Event" | "Dependency";
 
-/** The three Databricks jobs that make up the SAP pipeline ecosystem. */
-export type JobId = "job1_material_master" | "job2_procurement_sales" | "job3_gold_integration";
+/**
+ * A Databricks job identifier. Left as a plain string (rather than a fixed
+ * union) because live executions come from whatever jobs actually exist in
+ * the connected Databricks workspace — sapPipelineConfig.ts's JOBS list is
+ * opportunistic enrichment (known ids get a friendly label), not a closed set.
+ */
+export type JobId = string;
 
 /**
- * The four processing units a pipeline execution can belong to. Job 2 runs
- * two of these (procurement_processing, sales_processing) as parallel
- * branches — see config/sapPipelineConfig.ts for the job/notebook/table
- * mapping every other part of the app resolves this id against.
+ * A pipeline/processing-unit identifier. Same reasoning as JobId: mock data
+ * uses the curated SAP ids from sapPipelineConfig.ts, live data uses whatever
+ * pipeline name Databricks reports — both are valid strings.
  */
-export type PipelineId =
-  | "material_master_processing"
-  | "procurement_processing"
-  | "sales_processing"
-  | "gold_integration";
+export type PipelineId = string;
 
 export interface PipelineTrigger {
   type: TriggerType;
@@ -41,13 +41,18 @@ export interface PipelineExecution {
   runId: string;
   pipelineId: PipelineId;
   pipelineName: string;
+  /** Raw Databricks job id, used as a fallback label when pipelineId doesn't
+   * match a known entry in sapPipelineConfig.ts (e.g. live, unmapped data). */
+  jobId?: string | null;
   status: PipelineExecutionStatus;
   trigger: PipelineTrigger;
   startTime: string;
   endTime: string | null;
   durationMinutes: number | null;
-  country: CountryCode;
-  environment: Environment;
+  /** Not sourced from the live Databricks backend — present only on mock
+   * data, and only rendered on pages that haven't been wired to live data. */
+  country?: CountryCode;
+  environment?: Environment;
   owner: string | null;
   slaMinutes: number | null;
   errorCode: string | null;
@@ -58,13 +63,13 @@ export interface PipelineExecution {
 export interface PipelineExecutionFilters {
   search?: string;
   status?: PipelineExecutionStatus[];
-  country?: CountryCode[];
   pipelineId?: PipelineId[];
   triggerType?: TriggerType[];
-  environment?: Environment[];
   excludeManualTriggers?: boolean;
   dateFrom?: string;
   dateTo?: string;
+  /** Only meaningful against mock data — live executions don't carry a country. */
+  country?: CountryCode[];
 }
 
 export type PipelineExecutionSortKey =

@@ -8,7 +8,7 @@ import { EmptyState } from "@/components/common/EmptyState";
 import { ErrorState } from "@/components/common/ErrorState";
 import { TableRowsSkeleton } from "@/components/common/LoadingState";
 import { cn, formatDateTime, formatDuration } from "@/lib/utils";
-import { getCountryLabel, getJobForPipeline } from "@/config/sapPipelineConfig";
+import { getJobForPipeline } from "@/config/sapPipelineConfig";
 
 interface Column {
   key: PipelineExecutionSortKey | null;
@@ -20,7 +20,6 @@ const COLUMNS: Column[] = [
   { key: "status", label: "Status" },
   { key: null, label: "Job" },
   { key: "pipelineName", label: "Pipeline" },
-  { key: null, label: "Country" },
   { key: null, label: "Trigger" },
   { key: "startTime", label: "Start Time" },
   { key: "endTime", label: "End Time" },
@@ -104,7 +103,7 @@ export function PipelineTable({
             <TableRowsSkeleton rows={8} cols={COLUMNS.length} />
           ) : (
             executions.map((exec) => {
-              const job = getJobForPipeline(exec.pipelineId);
+              const jobLabel = getJobForPipeline(exec.pipelineId)?.label ?? exec.jobId ?? "—";
               return (
                 <tr
                   key={exec.runId}
@@ -122,14 +121,13 @@ export function PipelineTable({
                   <td className="px-4 py-3">
                     <PipelineStatusBadge status={exec.status} />
                   </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-text-secondary">{job?.label ?? "—"}</td>
+                  <td className="whitespace-nowrap px-4 py-3 text-text-secondary">{jobLabel}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1.5 font-medium text-text-primary">
                       {exec.pipelineName}
                       <ExternalLink className="size-3 shrink-0 text-text-tertiary opacity-0 transition-opacity group-hover:opacity-100" />
                     </div>
                   </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-text-secondary">{getCountryLabel(exec.country)}</td>
                   <td className="whitespace-nowrap px-4 py-3 text-text-secondary">{exec.trigger.name}</td>
                   <td className="whitespace-nowrap px-4 py-3 text-text-secondary">{formatDateTime(exec.startTime)}</td>
                   <td className="whitespace-nowrap px-4 py-3 text-text-secondary">{formatDateTime(exec.endTime)}</td>

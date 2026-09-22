@@ -105,6 +105,7 @@ export function getCountry(code: string): CountryDefinition | undefined {
   return countryByCode.get(code as CountryDefinition["code"]);
 }
 
-export function getCountryLabel(code: string): string {
+export function getCountryLabel(code: string | undefined): string {
+  if (!code) return "—";
   return getCountry(code)?.label ?? code;
 }

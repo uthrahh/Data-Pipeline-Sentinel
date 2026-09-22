@@ -34,7 +34,11 @@ export function KpiGrid({ metrics, isLoading }: { metrics: DashboardMetrics | nu
         value={formatNumber(metrics.failedPipelines.value)}
         deltaPct={metrics.failedPipelines.deltaPct}
         deltaIsGood={false}
-        supportingText={`${metrics.failedRequiringAttention} requiring attention`}
+        supportingText={
+          metrics.failedRequiringAttention !== null
+            ? `${metrics.failedRequiringAttention} requiring attention`
+            : `over ${metrics.periodLabel.toLowerCase()}`
+        }
         icon={AlertOctagon}
         accent="danger"
       />

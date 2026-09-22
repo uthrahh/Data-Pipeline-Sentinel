@@ -3,7 +3,7 @@
 import { Search } from "lucide-react";
 import type { PipelineExecutionFilters } from "@/types";
 import { FilterMenu } from "@/components/common/FilterMenu";
-import { COUNTRIES, PIPELINES } from "@/config/sapPipelineConfig";
+import { PIPELINES } from "@/config/sapPipelineConfig";
 
 const STATUS_OPTIONS = [
   { value: "SUCCESS", label: "Success" },
@@ -22,7 +22,6 @@ const TRIGGER_OPTIONS = [
 ];
 
 const PIPELINE_OPTIONS = PIPELINES.map((p) => ({ value: p.id, label: p.label }));
-const COUNTRY_OPTIONS = COUNTRIES.map((c) => ({ value: c.code, label: `${c.label} (${c.code})` }));
 
 interface PipelineFiltersProps {
   filters: PipelineExecutionFilters;
@@ -54,12 +53,6 @@ export function PipelineFilters({ filters, onChange, resultCount }: PipelineFilt
         options={PIPELINE_OPTIONS}
         selected={filters.pipelineId ?? []}
         onChange={(v) => onChange({ ...filters, pipelineId: v as PipelineExecutionFilters["pipelineId"] })}
-      />
-      <FilterMenu
-        label="Country"
-        options={COUNTRY_OPTIONS}
-        selected={filters.country ?? []}
-        onChange={(v) => onChange({ ...filters, country: v as PipelineExecutionFilters["country"] })}
       />
       <FilterMenu
         label="Trigger"
