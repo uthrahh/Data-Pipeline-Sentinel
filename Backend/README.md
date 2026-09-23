@@ -9,7 +9,7 @@ mocks, no LLM agents, no fabricated narrative.
 - **Pipelines/runs/overview** come directly from the Databricks Jobs API
   (`client.jobs.*`) — always live, no dependency on any Delta table.
 - **Incidents** are real failed job runs, tracked in one Delta table this app
-  owns (`multi_agent_ai_assitant_catelog.sentinel.incidents`), because
+  owns (`sentinel_pipeline.ops.incidents`), because
   approve/reject/remediation state is application state Databricks doesn't
   track natively. "Remediation" is the one generic, safe action that applies
   to any job: re-run it via the Jobs API. See `services/incidents_service.py`

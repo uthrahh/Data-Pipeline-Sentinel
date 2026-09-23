@@ -16,8 +16,8 @@ from typing import Optional
 from services.jobs_service import list_jobs, list_runs, get_run_raw, enum_value
 from services.sql_service import execute_sql, escape_sql
 
-CATALOG = "multi_agent_ai_assitant_catelog"
-SCHEMA = "sentinel"
+CATALOG = "sentinel_pipeline"  # owned by this app's setup, not shared with the old project
+SCHEMA = "ops"
 TABLE = f"{CATALOG}.{SCHEMA}.incidents"
 
 # Run outcomes that count as a failure worth raising an incident for.
