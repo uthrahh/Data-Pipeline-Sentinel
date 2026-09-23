@@ -1,0 +1,18 @@
+command:
+  - "sh"
+  - "-c"
+  - "npm run build && npm run start -- -p 8000"
+
+env:
+  - name: "NEXT_PUBLIC_API_URL"
+    value: "/api/proxy"
+  - name: "NEXT_PUBLIC_USE_LIVE_API"
+    value: "true"
+  - name: "DATABRICKS_HOST"
+    value: "https://dbc-fa603402-4338.cloud.databricks.com"
+  - name: "DATABRICKS_APP_URL"
+    value: "https://sentinel-pipeline-backend-7474652936146529.aws.databricksapps.com"
+  - name: "DATABRICKS_CLIENT_ID"
+    value: "a6d19716-697a-4cd5-a1a0-740766cd2d5a"
+  - name: "DATABRICKS_CLIENT_SECRET"
+    valueFrom: "backend-client-secret"

@@ -32,6 +32,14 @@ const BACKEND_URL = process.env.DATABRICKS_APP_URL;
 const CLIENT_ID = process.env.DATABRICKS_CLIENT_ID;
 const CLIENT_SECRET = process.env.DATABRICKS_CLIENT_SECRET;
 
+console.log("[proxy] config check:", {
+  DATABRICKS_HOST: DATABRICKS_HOST ?? "(missing)",
+  BACKEND_URL: BACKEND_URL ?? "(missing)",
+  CLIENT_ID: CLIENT_ID ?? "(missing)",
+  CLIENT_SECRET_present: Boolean(CLIENT_SECRET),
+  CLIENT_SECRET_length: CLIENT_SECRET?.length ?? 0,
+});
+
 let cachedToken: { value: string; expiresAt: number } | null = null;
 
 async function getAccessToken(): Promise<string> {
@@ -69,6 +77,7 @@ async function forward(req: NextRequest, path: string[]): Promise<NextResponse> 
   try {
     token = await getAccessToken();
   } catch (e) {
+    console.error("[proxy] token exchange failed:", e);
     return NextResponse.json({ success: false, error: `Backend auth failed: ${e}` }, { status: 502 });
   }
 
@@ -88,7 +97,8 @@ async function forward(req: NextRequest, path: string[]): Promise<NextResponse> 
   let upstream: Response;
   try {
     upstream = await fetch(targetUrl, init);
-  } catch {
+  } catch (e) {
+    console.error("[proxy] upstream fetch failed:", targetUrl, e);
     return NextResponse.json({ success: false, error: "Unable to reach the backend." }, { status: 502 });
   }
 
