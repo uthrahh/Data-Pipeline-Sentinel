@@ -7,6 +7,23 @@ mocks, no LLM agents, no fabricated narrative.
 **Live**: `https://sentinel-pipeline-backend-7474652936146529.aws.databricksapps.com`
 (runs as a Databricks App — see below)
 
+## Test pipelines
+
+The workspace also has 4 jobs created purely to exercise this app, so it
+doesn't depend on someone else's real (and often stale) pipelines to have
+anything to show. Notebook sources are in `test_pipelines/`. Each is on its
+own schedule so the app always has fresh, real execution data:
+
+| Job | Behavior | Schedule | Tests |
+|---|---|---|---|
+| `sentinel-test-success` | Always succeeds | every 15 min | Healthy-pipeline monitoring, success-rate KPI, recent executions |
+| `sentinel-test-hard-failure` | Always fails, even on rerun | every 45 min | Incident detection, Reject, "remediation also failed" path |
+| `sentinel-test-transient-failure` | Fails by default; succeeds when remediated with `force_success=true` | every 20 min | **The full happy path**: detect → approve → real rerun → real success → auto-resolve. See `TRANSIENT_TEST_JOB_ID` in `services/incidents_service.py::approve_incident` — the one job-specific special case in an otherwise fully generic "just rerun it" action. |
+| `sentinel-test-long-running` | Sleeps ~2 min then succeeds | every 30 min | "Running" status display, non-trivial duration KPIs |
+
+All four are tagged `sentinel_test: true` and granted `CAN_MANAGE_RUN` to
+this app's service principal the same way any other job would be.
+
 ## What this is (and isn't)
 
 - **Pipelines/runs/overview** come directly from the Databricks Jobs API

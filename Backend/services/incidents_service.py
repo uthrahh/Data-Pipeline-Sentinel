@@ -214,6 +214,14 @@ def get_incident_by_run_id(run_id: int) -> Optional[dict]:
     return _refresh_if_remediating(_row_to_dict(rows[0]))
 
 
+# The sentinel-test-transient-failure test job fails by default and only
+# succeeds when rerun with force_success=true — this is what makes it useful
+# for testing the full happy-path lifecycle end to end. This is the one
+# legitimate case for job-specific remediation logic in an otherwise fully
+# generic "just rerun it" action; every other job gets a plain rerun.
+TRANSIENT_TEST_JOB_ID = 750109753957669
+
+
 def approve_incident(incident_id: str, approved_by: str) -> dict:
     from databricks_client import client  # local import avoids a module cycle at import time
 
@@ -223,7 +231,9 @@ def approve_incident(incident_id: str, approved_by: str) -> dict:
     if incident["status"] != "WAITING_APPROVAL":
         raise ValueError(f"Incident {incident_id} is not awaiting approval (status={incident['status']})")
 
-    run_response = client.jobs.run_now(job_id=int(incident["job_id"]))
+    job_id = int(incident["job_id"])
+    run_params = {"notebook_params": {"force_success": "true"}} if job_id == TRANSIENT_TEST_JOB_ID else {}
+    run_response = client.jobs.run_now(job_id=job_id, **run_params)
     remediation_run_id = run_response.run_id
     now = _now_iso()
 
