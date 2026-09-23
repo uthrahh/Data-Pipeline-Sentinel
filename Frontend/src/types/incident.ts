@@ -78,6 +78,20 @@ export interface Recommendation {
   confidencePct: number;
 }
 
+export type SuggestedRemediationAction = "RETRY" | "ESCALATE";
+
+/**
+ * The backend's real (non-fabricated) suggestion for every live incident —
+ * a plain error_type -> action rule, not an AI narrative. RETRY incidents are
+ * auto-remediated immediately (see `approval.decidedBy === "auto-remediation"`);
+ * ESCALATE incidents wait for a human. See Backend/services/incidents_service.py::_suggest_action.
+ * Not sourced from live Databricks data on mock incidents — optional there.
+ */
+export interface SuggestedRemediation {
+  action: SuggestedRemediationAction;
+  reason: string;
+}
+
 export type ApprovalDecision = "APPROVED" | "REJECTED";
 
 export interface Approval {
@@ -129,6 +143,7 @@ export interface Incident {
   dq: DQResult | null;
   sla: SLAResult | null;
   recommendation: Recommendation | null;
+  suggestedRemediation?: SuggestedRemediation | null;
   approval: Approval | null;
   remediation: Remediation | null;
   postValidation: PostValidation | null;

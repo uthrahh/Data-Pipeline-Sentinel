@@ -11,9 +11,14 @@ import type {
   Remediation,
   RemediationRunStatus,
   Severity,
+  SuggestedRemediation,
+  SuggestedRemediationAction,
 } from "@/types";
 
 const SIMULATED_LATENCY_MS = 260;
+
+/** Matches Backend/services/incidents_service.py::AUTO_REMEDIATION_ACTOR. */
+const AUTO_REMEDIATION_ACTOR = "auto-remediation";
 
 function delay<T>(value: T, ms = SIMULATED_LATENCY_MS): Promise<T> {
   return new Promise((resolve) => setTimeout(() => resolve(value), ms));
@@ -195,6 +200,8 @@ interface RawIncidentRow {
   remediation_started_at: string | null;
   remediation_completed_at: string | null;
   updated_at: string;
+  suggested_action: string | null;
+  suggested_action_reason: string | null;
 }
 
 interface IncidentsListResponse {
@@ -249,12 +256,15 @@ function mapAudit(row: RawIncidentRow): AuditEvent[] {
       detail: row.rejection_reason ?? `Rejected by ${row.approved_by ?? "unknown"}.`,
     });
   } else if (row.approved_at) {
+    const isAuto = row.approved_by === AUTO_REMEDIATION_ACTOR;
     events.push({
       id: `${row.incident_id}-approved`,
       timestamp: row.approved_at,
-      label: "Approved",
-      actor: "human",
-      detail: `Approved by ${row.approved_by ?? "unknown"}.`,
+      label: isAuto ? "Auto-remediated" : "Approved",
+      actor: isAuto ? "system" : "human",
+      detail: isAuto
+        ? "Sentinel remediated this automatically — no human approval needed."
+        : `Approved by ${row.approved_by ?? "unknown"}.`,
     });
   }
   if (row.remediation_started_at) {
@@ -278,6 +288,14 @@ function mapAudit(row: RawIncidentRow): AuditEvent[] {
   return events;
 }
 
+function mapSuggestedRemediation(row: RawIncidentRow): SuggestedRemediation | null {
+  if (!row.suggested_action) return null;
+  return {
+    action: row.suggested_action as SuggestedRemediationAction,
+    reason: row.suggested_action_reason ?? "",
+  };
+}
+
 function mapIncident(row: RawIncidentRow): Incident {
   return {
     incidentId: row.incident_id,
@@ -299,6 +317,7 @@ function mapIncident(row: RawIncidentRow): Incident {
     dq: null,
     sla: null,
     recommendation: null,
+    suggestedRemediation: mapSuggestedRemediation(row),
     approval: mapApproval(row),
     remediation: mapRemediation(row),
     postValidation: null,

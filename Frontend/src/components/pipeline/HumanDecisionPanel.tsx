@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CheckCircle2, ShieldCheck, ThumbsDown, ThumbsUp, XCircle } from "lucide-react";
+import { CheckCircle2, ShieldCheck, Sparkles, ThumbsDown, ThumbsUp, XCircle } from "lucide-react";
 import type { Incident } from "@/types";
 import { Button } from "@/components/common/Button";
 import { Modal } from "@/components/common/Modal";
@@ -9,6 +9,9 @@ import { StatusBadge } from "@/components/common/StatusBadge";
 import { AgentBadge } from "@/components/common/AgentBadge";
 import { RISK_STYLES, CURRENT_USER } from "@/lib/constants";
 import { formatDateTime } from "@/lib/utils";
+
+/** Matches Backend/services/incidents_service.py::AUTO_REMEDIATION_ACTOR. */
+const AUTO_REMEDIATION_ACTOR = "auto-remediation";
 
 interface HumanDecisionPanelProps {
   incident: Incident;
@@ -27,10 +30,11 @@ export function HumanDecisionPanel({ incident, onApprove, onReject, isSubmitting
   const [rejectOpen, setRejectOpen] = useState(false);
   const [reason, setReason] = useState("");
 
-  const { recommendation, approval } = incident;
+  const { recommendation, suggestedRemediation, approval } = incident;
   if (!approval) return null;
 
   const { decision, decidedAt, decidedBy, rejectionReason } = approval;
+  const isAutoRemediated = decidedBy === AUTO_REMEDIATION_ACTOR;
 
   return (
     <div>
@@ -42,7 +46,15 @@ export function HumanDecisionPanel({ incident, onApprove, onReject, isSubmitting
         <AgentBadge agentId="action" />
       </div>
 
-      {decision === "APPROVED" ? (
+      {decision === "APPROVED" && isAutoRemediated ? (
+        <div className="flex items-center gap-3 rounded-lg border border-accent-500/20 bg-accent-50 px-4 py-3">
+          <Sparkles className="size-4 shrink-0 text-accent-600" />
+          <p className="text-sm text-accent-700">
+            <span className="font-semibold">Auto-remediated</span> at {formatDateTime(decidedAt)} — no human approval was needed.
+            {suggestedRemediation && <span className="block text-accent-700/80">{suggestedRemediation.reason}</span>}
+          </p>
+        </div>
+      ) : decision === "APPROVED" ? (
         <div className="flex items-center gap-3 rounded-lg border border-success-500/20 bg-success-50 px-4 py-3">
           <CheckCircle2 className="size-4 shrink-0 text-success-600" />
           <p className="text-sm text-success-700">
@@ -72,6 +84,22 @@ export function HumanDecisionPanel({ incident, onApprove, onReject, isSubmitting
                 <StatusBadge style={RISK_STYLES[recommendation.risk]} />
                 <span className="text-[11px] text-text-tertiary">{recommendation.confidencePct}% confidence</span>
               </div>
+            </div>
+          ) : suggestedRemediation ? (
+            <div className="rounded-lg border border-border bg-surface-subtle px-4 py-3">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-text-tertiary">
+                Sentinel Suggests
+              </p>
+              <p className="mt-1 text-sm font-medium text-text-primary">
+                {suggestedRemediation.action === "RETRY" ? "Retry automatically" : "Escalate to a human"}
+              </p>
+              <p className="mt-1 text-sm text-text-secondary">{suggestedRemediation.reason}</p>
+              {suggestedRemediation.action === "RETRY" && (
+                <p className="mt-2 text-xs text-text-tertiary">
+                  Sentinel normally auto-remediates this kind of failure — this one is still waiting on approval
+                  because the trigger failed or a prior auto-attempt on this job didn&apos;t work.
+                </p>
+              )}
             </div>
           ) : (
             <div className="rounded-lg border border-border bg-surface-subtle px-4 py-3">

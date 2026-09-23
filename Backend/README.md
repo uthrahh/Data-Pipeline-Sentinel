@@ -39,6 +39,20 @@ this app's service principal the same way any other job would be.
   Jobs API. See `services/incidents_service.py` for the exact (documented,
   transparent) heuristics used for severity and error classification —
   there is no LLM investigation/DQ/SLA agent here.
+- **Every incident gets a suggested action** — a plain `error_type -> action`
+  rule (`_suggest_action` in `services/incidents_service.py`), not an AI
+  narrative: `InfrastructureError` (cluster/timeout/memory/connection
+  keywords) suggests **RETRY**, everything else (`UserError`, `DataError`,
+  `SystemError`) suggests **ESCALATE**.
+- **Selective auto-remediation**: incidents suggesting RETRY are remediated
+  immediately when detected — no human approval wait — *unless* severity is
+  HIGH (a job that's already failed more than once in the lookback window
+  always escalates to a human instead) or this job's auto-remediation has
+  already failed `MAX_AUTO_RETRIES` (3) times in a row, in which case it
+  falls back to `WAITING_APPROVAL` so a human has to look at it. Auto-fired
+  remediations are recorded with `approved_by = 'auto-remediation'` so the
+  audit trail always shows whether a rerun was human- or system-authorized —
+  same generic "just rerun it" action either way, just a different trigger.
 - There is **no chat assistant** in this backend. If you need that, it's a
   separate, larger effort (Genie space + model serving endpoint) — ask for it
   explicitly.

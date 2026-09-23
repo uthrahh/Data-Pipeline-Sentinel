@@ -1,9 +1,10 @@
 # Sentinel AI Pipeline
 
 A Databricks pipeline monitoring and governed-remediation platform: live job
-status, an incident queue backed by real failed runs, human-approved
-remediation (a real re-run triggered via the Databricks Jobs API), and
-execution analytics.
+status, an incident queue backed by real failed runs, selective
+remediation (a real re-run triggered via the Databricks Jobs API) — safe,
+transient-looking failures are auto-remediated immediately, everything else
+waits for human approval — and execution analytics.
 
 **Live**: `https://sentinel-pipeline-frontend-7474652936146529.aws.databricksapps.com`
 (Databricks-authenticated users only — see Deployment below)
@@ -45,11 +46,15 @@ src/
   app/api/proxy/ Server-side proxy to the backend — see "Deployment" below.
 ```
 
-**Lifecycle modeled end-to-end:** Detect → (Approve, human-in-the-loop,
-required) → Remediate → Resolve. Mock-mode incidents additionally model
-Investigate → DQ/SLA → Recommend stages with an AI-agent narrative; live-mode
-incidents (real failed Databricks runs, no LLM agent behind them) skip those
-stages rather than fake them — see `lib/lifecycle.ts`.
+**Lifecycle modeled end-to-end:** Detect → Suggest (a plain, transparent
+error_type → RETRY/ESCALATE rule, not an AI narrative — see
+`Backend/services/incidents_service.py::_suggest_action`) → Approve
+(auto-approved immediately for RETRY suggestions unless the job is HIGH
+severity or has exhausted its auto-retry budget; human-in-the-loop for
+everything else) → Remediate → Resolve. Mock-mode incidents additionally
+model Investigate → DQ/SLA → Recommend stages with an AI-agent narrative;
+live-mode incidents (real failed Databricks runs, no LLM agent behind them)
+skip those stages rather than fake them — see `lib/lifecycle.ts`.
 
 ## Deployment
 
