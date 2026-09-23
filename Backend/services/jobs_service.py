@@ -102,3 +102,27 @@ def get_run_raw(run_id: int):
     """Returns the raw SDK run object (not serialized) — used by incidents_service
     to check a remediation run's live status without re-fetching by job_id."""
     return client.jobs.get_run(run_id)
+
+
+def get_run_error_detail(run_id: int) -> Optional[str]:
+    """Best-effort real error text for a failed run. The top-level run's
+    state_message is usually just a generic wrapper (e.g. "Workload failed,
+    see run output for details.") — the actual exception message lives in
+    each failed task's run output. Used by incidents_service to classify
+    failures accurately instead of guessing off the generic wrapper text.
+    Returns None (caller falls back to state_message) if nothing more
+    specific is found — e.g. an infra-level failure with no task output at all."""
+    try:
+        run = client.jobs.get_run(run_id)
+    except DatabricksError:
+        return None
+
+    task_run_ids = [t.run_id for t in run.tasks] if run.tasks else [run_id]
+    for task_run_id in task_run_ids:
+        try:
+            output = client.jobs.get_run_output(task_run_id)
+        except DatabricksError:
+            continue
+        if output.error:
+            return output.error
+    return None

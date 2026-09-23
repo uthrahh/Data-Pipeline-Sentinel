@@ -13,7 +13,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Optional
 
-from services.jobs_service import list_jobs, list_runs, get_run_raw, enum_value
+from services.jobs_service import list_jobs, list_runs, get_run_raw, get_run_error_detail, enum_value
 from services.sql_service import execute_sql, escape_sql
 
 CATALOG = "sentinel_pipeline"  # owned by this app's setup, not shared with the old project
@@ -203,7 +203,12 @@ def sync_incidents(lookback_days: int = 3) -> int:
             incident_id = f"INC-{uuid.uuid4().hex[:10].upper()}"
             # Recurring failure on the same job within the lookback window -> HIGH, else MEDIUM.
             severity = "HIGH" if job_failure_counts[job["job_id"]] > 1 else "MEDIUM"
-            error_type = _classify_error_type(run["state_message"])
+            # The run-level state_message is often just a generic wrapper
+            # ("Workload failed, see run output for details.") — try to get
+            # the actual task exception text first, since classification is
+            # only as good as the message it's reading.
+            error_message = get_run_error_detail(run["run_id"]) or run["state_message"] or "No error message reported."
+            error_type = _classify_error_type(error_message)
             action, reason = _suggest_action(job["job_id"], error_type, severity)
             now = _now_iso()
 
@@ -214,7 +219,7 @@ def sync_incidents(lookback_days: int = 3) -> int:
                     suggested_action, suggested_action_reason
                 ) VALUES (
                     '{incident_id}', {job['job_id']}, '{escape_sql(job['name'] or '')}', {run['run_id']},
-                    '{escape_sql(run['run_page_url'] or '')}', '{escape_sql(run['state_message'] or 'No error message reported.')}',
+                    '{escape_sql(run['run_page_url'] or '')}', '{escape_sql(error_message)}',
                     '{error_type}', '{run['result_state']}', '{severity}',
                     TIMESTAMP '{_sql_ts(run['start_time'])}', 'WAITING_APPROVAL', TIMESTAMP '{_sql_ts(now)}',
                     '{action}', '{escape_sql(reason)}'
