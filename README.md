@@ -14,7 +14,9 @@
   <img src="https://raw.githubusercontent.com/uthrahh/uthrahh/main/public/sentinel-dashboard.png" alt="Sentinel dashboard: live Databricks job monitoring and incident queue" width="100%" />
 </p>
 
-> Deployed as two Databricks Apps in a live workspace. Access is gated by Databricks SSO, so there is no public demo link. The frontend also runs locally on mock data in under a minute (see [Quick start](#quick-start)).
+**Live app:** [sentinel-pipeline-frontend-7474652936146529.aws.databricksapps.com](https://sentinel-pipeline-frontend-7474652936146529.aws.databricksapps.com)
+
+> Deployed as two Databricks Apps in a live workspace. Access is gated by Databricks SSO, so the live link only works for users in that workspace. To try it without an account, the frontend runs locally on mock data in under a minute (see [Quick start](#quick-start)).
 
 ---
 
