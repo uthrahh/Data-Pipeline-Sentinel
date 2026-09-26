@@ -132,4 +132,4 @@ Frontend/
 
 ---
 
-Built by [Pavithra Uthrah R K](https://github.com/uthrahh) as a proof of concept during a data engineering internship at KaarTech. More on my [portfolio](https://uthrahrk.vercel.app).
+Built as a proof of concept during a data engineering internship at KaarTech. More on my [portfolio](https://uthrahrk.vercel.app).
