@@ -10,6 +10,7 @@ heuristic over real data — never an invented narrative.
 """
 
 import uuid
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -183,8 +184,11 @@ def sync_incidents(lookback_days: int = 3) -> int:
     window_start_ms = int((datetime.now(timezone.utc).timestamp() - lookback_days * 86400) * 1000)
 
     job_failure_counts: dict[int, int] = {}
-    new_count = 0
+    new_failures: list[tuple[dict, dict, int]] = []  # (job, run, failure_count_at_detection)
 
+    # Pass 1 (cheap, sequential): find genuinely new failures and compute
+    # per-job failure counts. Order matters here — severity depends on which
+    # failure-for-this-job we're up to — so this stays a plain sequential loop.
     for job in list_jobs():
         try:
             runs = list_runs(job["job_id"], start_time_from=window_start_ms, completed_only=True)
@@ -200,42 +204,57 @@ def sync_incidents(lookback_days: int = 3) -> int:
             if key in existing:
                 continue
 
-            incident_id = f"INC-{uuid.uuid4().hex[:10].upper()}"
-            # Recurring failure on the same job within the lookback window -> HIGH, else MEDIUM.
-            severity = "HIGH" if job_failure_counts[job["job_id"]] > 1 else "MEDIUM"
-            # The run-level state_message is often just a generic wrapper
-            # ("Workload failed, see run output for details.") — try to get
-            # the actual task exception text first, since classification is
-            # only as good as the message it's reading.
-            error_message = get_run_error_detail(run["run_id"]) or run["state_message"] or "No error message reported."
-            error_type = _classify_error_type(error_message)
-            action, reason = _suggest_action(job["job_id"], error_type, severity)
-            now = _now_iso()
-
-            execute_sql(f"""
-                INSERT INTO {TABLE} (
-                    incident_id, job_id, job_name, run_id, run_page_url, error_message,
-                    error_type, result_state, severity, detected_at, status, updated_at,
-                    suggested_action, suggested_action_reason
-                ) VALUES (
-                    '{incident_id}', {job['job_id']}, '{escape_sql(job['name'] or '')}', {run['run_id']},
-                    '{escape_sql(run['run_page_url'] or '')}', '{escape_sql(error_message)}',
-                    '{error_type}', '{run['result_state']}', '{severity}',
-                    TIMESTAMP '{_sql_ts(run['start_time'])}', 'WAITING_APPROVAL', TIMESTAMP '{_sql_ts(now)}',
-                    '{action}', '{escape_sql(reason)}'
-                )
-            """)
             existing.add(key)
-            new_count += 1
+            new_failures.append((job, run, job_failure_counts[job["job_id"]]))
 
-            if action == "RETRY":
-                # Auto-eligible: don't wait on a human. Best-effort — if the
-                # trigger itself fails (e.g. Jobs API hiccup), the incident is
-                # simply left at WAITING_APPROVAL for a human to pick up.
-                try:
-                    _trigger_remediation(incident_id, job["job_id"], AUTO_REMEDIATION_ACTOR)
-                except Exception:
-                    pass
+    if not new_failures:
+        return 0
+
+    # Pass 2 (the slow part — real network calls, so run concurrently):
+    # fetch each new failure's actual task-level error text. The run-level
+    # state_message is usually just a generic wrapper ("Workload failed, see
+    # run output for details."), so classification needs the real text.
+    # Sequentially, this scaled with backlog size (51 new incidents once took
+    # ~190s); concurrent, it's bounded by the slowest single lookup.
+    with ThreadPoolExecutor(max_workers=min(len(new_failures), 8) or 1) as pool:
+        error_details = list(pool.map(lambda item: get_run_error_detail(item[1]["run_id"]), new_failures))
+
+    # Pass 3 (cheap, sequential): classify, insert, and auto-remediate where
+    # eligible. Sequential is fine here — it's just SQL writes plus, for
+    # RETRY-eligible incidents, one rerun trigger.
+    new_count = 0
+    for (job, run, failure_count), detail in zip(new_failures, error_details):
+        incident_id = f"INC-{uuid.uuid4().hex[:10].upper()}"
+        # Recurring failure on the same job within the lookback window -> HIGH, else MEDIUM.
+        severity = "HIGH" if failure_count > 1 else "MEDIUM"
+        error_message = detail or run["state_message"] or "No error message reported."
+        error_type = _classify_error_type(error_message)
+        action, reason = _suggest_action(job["job_id"], error_type, severity)
+        now = _now_iso()
+
+        execute_sql(f"""
+            INSERT INTO {TABLE} (
+                incident_id, job_id, job_name, run_id, run_page_url, error_message,
+                error_type, result_state, severity, detected_at, status, updated_at,
+                suggested_action, suggested_action_reason
+            ) VALUES (
+                '{incident_id}', {job['job_id']}, '{escape_sql(job['name'] or '')}', {run['run_id']},
+                '{escape_sql(run['run_page_url'] or '')}', '{escape_sql(error_message)}',
+                '{error_type}', '{run['result_state']}', '{severity}',
+                TIMESTAMP '{_sql_ts(run['start_time'])}', 'WAITING_APPROVAL', TIMESTAMP '{_sql_ts(now)}',
+                '{action}', '{escape_sql(reason)}'
+            )
+        """)
+        new_count += 1
+
+        if action == "RETRY":
+            # Auto-eligible: don't wait on a human. Best-effort — if the
+            # trigger itself fails (e.g. Jobs API hiccup), the incident is
+            # simply left at WAITING_APPROVAL for a human to pick up.
+            try:
+                _trigger_remediation(incident_id, job["job_id"], AUTO_REMEDIATION_ACTOR)
+            except Exception:
+                pass
 
     return new_count
 
