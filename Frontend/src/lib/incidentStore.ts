@@ -1,19 +1,26 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import { MOCK_INCIDENTS } from "@/data/mock/incidents";
+import { USE_LIVE_API } from "@/lib/liveMode";
+import { fetchActiveIncidents, fetchIncidentChecks, fetchIncidentDetail, fetchIncidentHistory } from "@/services/liveApiService";
+import { mapLiveIncidentDetailToIncident, mapLiveIncidentToIncident } from "@/lib/mapLiveIncident";
 import type { Incident } from "@/types";
 
 /**
- * The one mutable source of truth for incident state on this static site —
- * no backend, so "state" is just an in-memory store seeded from the mock
- * fixtures. Both the incident detail page's own actions (DQ Breach's
- * Run/Send Email choice) and notificationStore.ts (sending/rejecting a
- * drafted notification closes the incident it came from) write through here,
+ * The one mutable source of truth for incident state — seeded from the
+ * static mock fixtures normally, or (when USE_LIVE_API) replaced with real
+ * incidents fetched from the ai-dataops-assistant API once initLiveIncidents()
+ * runs. Both the incident detail page's own actions (DQ Breach's Run/Send
+ * Email choice, mock mode only) and notificationStore.ts write through here,
  * so every view of an incident always agrees.
  */
-const store = new Map<string, Incident>(MOCK_INCIDENTS.map((i) => [i.incidentId, i]));
+const store = new Map<string, Incident>(USE_LIVE_API ? [] : MOCK_INCIDENTS.map((i) => [i.incidentId, i]));
 const listeners = new Set<() => void>();
+
+export type LoadStatus = "idle" | "loading" | "loaded" | "error";
+let loadStatus: LoadStatus = USE_LIVE_API ? "idle" : "loaded";
+let liveLoadStarted = false;
 
 // useSyncExternalStore requires getSnapshot to return a stable (===) value
 // when nothing has changed, or React re-renders forever. Array.from(...) on
@@ -88,4 +95,53 @@ export function useIncidentFromStore(incidentId: string): Incident | undefined {
 
 export function useAllIncidentsFromStore(): Incident[] {
   return useSyncExternalStore(subscribe, getAllIncidentsSnapshot, getAllIncidentsSnapshot);
+}
+
+export function useIncidentsLoadStatus(): LoadStatus {
+  return useSyncExternalStore(subscribe, () => loadStatus, () => loadStatus);
+}
+
+/**
+ * Fetches real incidents (active + history, merged so an incident present
+ * in both only counts once) from ai-dataops-assistant and replaces the
+ * store's contents. Safe to call from multiple components mounting at
+ * once — only the first call actually fetches.
+ */
+export async function initLiveIncidents(): Promise<void> {
+  if (!USE_LIVE_API || liveLoadStarted) return;
+  liveLoadStarted = true;
+  loadStatus = "loading";
+  emit();
+  try {
+    const [active, history] = await Promise.all([fetchActiveIncidents(), fetchIncidentHistory()]);
+    const merged = new Map<string, Incident>();
+    for (const row of history) merged.set(row.incident_id, mapLiveIncidentToIncident(row));
+    for (const row of active) merged.set(row.incident_id, mapLiveIncidentToIncident(row)); // active is freshest
+    store.clear();
+    for (const [id, incident] of merged) store.set(id, incident);
+    loadStatus = "loaded";
+  } catch {
+    loadStatus = "error";
+  }
+  emit();
+}
+
+/** On-demand, per-incident: fetches the full detail (investigation text) + DQ/SLA checks and merges them into the store entry. */
+export async function hydrateIncidentChecks(incidentId: string): Promise<void> {
+  const current = store.get(incidentId);
+  if (!current) return;
+  try {
+    const [detail, checks] = await Promise.all([fetchIncidentDetail(incidentId), fetchIncidentChecks(incidentId)]);
+    const enriched = detail ? mapLiveIncidentDetailToIncident(detail, checks) : { ...current, dq: current.dq, sla: current.sla };
+    store.set(incidentId, { ...current, dq: enriched.dq, sla: enriched.sla });
+    emit();
+  } catch {
+    // best-effort — leave the list-level data as-is
+  }
+}
+
+export function useInitLiveIncidents(): void {
+  useEffect(() => {
+    initLiveIncidents();
+  }, []);
 }

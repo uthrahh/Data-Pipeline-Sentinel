@@ -4,12 +4,15 @@ import { useMemo, useState } from "react";
 import { PageHeader } from "@/components/common/PageHeader";
 import { IncidentFilters } from "@/components/incident/IncidentFilters";
 import { IncidentsTable } from "@/components/incident/IncidentsTable";
-import { useAllIncidentsFromStore } from "@/lib/incidentStore";
+import { useAllIncidentsFromStore, useIncidentsLoadStatus, useInitLiveIncidents } from "@/lib/incidentStore";
+import { USE_LIVE_API } from "@/lib/liveMode";
 import type { IncidentFilters as IncidentFiltersType } from "@/types";
 
 export default function IncidentsPage() {
+  useInitLiveIncidents();
   const [filters, setFilters] = useState<IncidentFiltersType>({});
   const allIncidents = useAllIncidentsFromStore();
+  const loadStatus = useIncidentsLoadStatus();
 
   const filtered = useMemo(() => {
     let items = [...allIncidents].sort((a, b) => (a.detectedAt < b.detectedAt ? 1 : -1));
@@ -27,12 +30,19 @@ export default function IncidentsPage() {
 
   return (
     <div className="flex flex-col">
-      <PageHeader title="Incidents" description="Every pipeline failure, from detection through resolution — all 6 failure types." />
+      <PageHeader
+        title="Incidents"
+        description={
+          USE_LIVE_API
+            ? "Real incidents fetched from the ai-dataops-assistant API — detection through resolution."
+            : "Every pipeline failure, from detection through resolution — all 6 failure types."
+        }
+      />
 
       <div className="p-4 sm:p-6">
         <div className="overflow-hidden rounded-xl border border-border bg-surface">
           <IncidentFilters filters={filters} onChange={setFilters} resultCount={filtered.length} />
-          <IncidentsTable incidents={filtered} isLoading={false} error={null} />
+          <IncidentsTable incidents={filtered} isLoading={loadStatus === "loading"} error={loadStatus === "error" ? "Unable to load live incidents." : null} />
         </div>
       </div>
     </div>

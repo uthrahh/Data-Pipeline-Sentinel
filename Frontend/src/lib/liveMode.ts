@@ -1,10 +1,9 @@
 /**
  * Single source of truth for whether the app is pulling from the live
- * Databricks-backed API or the built-in mock fixtures. Hardcoded false on
- * this branch by design: this is a static site with no backend connection
- * at all (see the 30-pipeline / sap_demo-grounded fixtures under
- * data/mock/) — no env var can accidentally point it at a live backend.
- * The live, Databricks-backed version of this app lives on other branches
- * (`initial`), which keep the env-var-driven version of this file.
+ * Databricks-backed API (the separately-deployed `ai-dataops-assistant`
+ * app — see services/liveApiService.ts) or the built-in mock fixtures.
+ * Driven by NEXT_PUBLIC_USE_LIVE_API so local dev can still run against
+ * fixtures without a backend, while the deployed Databricks App sets it
+ * true (see app.yaml).
  */
-export const USE_LIVE_API = false;
+export const USE_LIVE_API = process.env.NEXT_PUBLIC_USE_LIVE_API === "true";

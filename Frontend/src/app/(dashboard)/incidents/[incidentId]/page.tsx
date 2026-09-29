@@ -1,12 +1,15 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Sparkles } from "lucide-react";
-import { useIncidentFromStore } from "@/lib/incidentStore";
+import { ArrowLeft, BrainCircuit, Sparkles } from "lucide-react";
+import { hydrateIncidentChecks, useIncidentFromStore, useIncidentsLoadStatus, useInitLiveIncidents } from "@/lib/incidentStore";
 import { useNotificationFromStore } from "@/lib/notificationStore";
+import { USE_LIVE_API } from "@/lib/liveMode";
+import { fetchIncidentDetail } from "@/services/liveApiService";
 import { PageHeader } from "@/components/common/PageHeader";
 import { EmptyState } from "@/components/common/EmptyState";
+import { LoadingState } from "@/components/common/LoadingState";
 import { Card, CardBody, CardHeader } from "@/components/common/Card";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { INCIDENT_STATUS_STYLES, SEVERITY_STYLES, FAILURE_TYPE_STYLES } from "@/lib/constants";
@@ -31,11 +34,25 @@ function Field({ label, value }: { label: string; value: ReactNode }) {
 }
 
 export default function IncidentDetailPage() {
+  useInitLiveIncidents();
   const params = useParams<{ incidentId: string }>();
   const router = useRouter();
   const incidentId = decodeURIComponent(params.incidentId);
   const incident = useIncidentFromStore(incidentId);
   const notification = useNotificationFromStore(incident?.notificationId ?? "__none__");
+  const loadStatus = useIncidentsLoadStatus();
+  const [rawInvestigation, setRawInvestigation] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!USE_LIVE_API || !incident) return;
+    hydrateIncidentChecks(incidentId);
+    fetchIncidentDetail(incidentId).then((detail) => setRawInvestigation(detail?.investigation_result ?? null));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [incidentId, Boolean(incident)]);
+
+  if (!incident && loadStatus === "loading") {
+    return <LoadingState label="Loading incident from ai-dataops-assistant…" className="py-24" />;
+  }
 
   if (!incident) {
     return (
@@ -52,7 +69,8 @@ export default function IncidentDetailPage() {
     );
   }
 
-  const isDqBreachUndecided = incident.status === "WAITING_APPROVAL" && incident.failure.errorType === "DATA_QUALITY_BREACH" && !incident.notificationId;
+  const isDqBreachUndecided =
+    !USE_LIVE_API && incident.status === "WAITING_APPROVAL" && incident.failure.errorType === "DATA_QUALITY_BREACH" && !incident.notificationId;
 
   return (
     <div className="flex flex-col">
@@ -93,6 +111,15 @@ export default function IncidentDetailPage() {
         <OperationalMetadataCard incident={incident} />
 
         {isDqBreachUndecided && <DataQualityDecisionPanel incident={incident} />}
+
+        {USE_LIVE_API && rawInvestigation && (
+          <Card>
+            <CardHeader title="AI Investigation (raw agent output)" icon={<BrainCircuit className="size-4" />} description="Unedited output from the ai-dataops-assistant investigation agent." />
+            <CardBody>
+              <pre className="max-h-96 overflow-auto whitespace-pre-wrap rounded-lg border border-border bg-surface-subtle p-3 text-xs leading-relaxed text-text-secondary">{rawInvestigation}</pre>
+            </CardBody>
+          </Card>
+        )}
 
         {incident.investigation && (
           <Card>
