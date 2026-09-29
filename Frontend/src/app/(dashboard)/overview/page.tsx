@@ -1,75 +1,99 @@
 "use client";
 
 import { useMemo } from "react";
-import { useDashboardMetrics } from "@/hooks/useDashboardMetrics";
-import { useIncidents } from "@/hooks/useIncidents";
-import { usePipelines } from "@/hooks/usePipelines";
+import Link from "next/link";
+import { Activity, AlertOctagon, CheckCircle2, Database, Gauge, HeartPulse, Timer } from "lucide-react";
 import { PageHeader } from "@/components/common/PageHeader";
-import { KpiGrid } from "@/components/dashboard/KpiGrid";
+import { KpiCard } from "@/components/dashboard/KpiCard";
 import { IncidentQueueCard } from "@/components/dashboard/IncidentQueueCard";
 import { RecentExecutionsCard } from "@/components/dashboard/RecentExecutionsCard";
-import { ErrorState } from "@/components/common/ErrorState";
 import { Card, CardHeader } from "@/components/common/Card";
-import { PipelineDependencyDiagram } from "@/components/pipeline/PipelineDependencyDiagram";
-import { LiveJobsSummary } from "@/components/pipeline/LiveJobsSummary";
-import { Workflow } from "lucide-react";
-import type { PipelineId } from "@/types";
-import { USE_LIVE_API } from "@/lib/liveMode";
+import { OverviewSettingsPanel } from "@/components/dashboard/OverviewSettingsPanel";
+import { usePipelines } from "@/hooks/usePipelines";
+import { useAllIncidentsFromStore } from "@/lib/incidentStore";
+import { useOverviewSettings } from "@/lib/overviewSettings";
+import { buildPipelineSummaries } from "@/data/mock/pipelineSummaries";
+import { computeOverviewKpis } from "@/lib/overviewMetrics";
+import { formatDuration, formatNumber, formatPercent } from "@/lib/utils";
 
-const ATTENTION_STATUSES = ["OPEN", "INVESTIGATING", "WAITING_APPROVAL", "REMEDIATION_FAILED", "VALIDATION_FAILED"] as const;
+const ATTENTION_STATUSES = new Set(["OPEN", "INVESTIGATING", "WAITING_APPROVAL", "REMEDIATION_FAILED", "VALIDATION_FAILED"]);
 
 export default function OverviewPage() {
-  const { data: metrics, isLoading: metricsLoading, error: metricsError, refresh } = useDashboardMetrics();
-  const { data: attention } = useIncidents({ status: [...ATTENTION_STATUSES] });
-  const { data: recent } = usePipelines({ sortKey: "startTime", sortDirection: "desc", pageSize: 6 });
+  const { settings, setSettings } = useOverviewSettings();
+  const pipelines = useMemo(() => buildPipelineSummaries(settings), [settings]);
+  const kpis = useMemo(() => computeOverviewKpis(pipelines), [pipelines]);
 
-  const attentionPipelineIds = useMemo(
-    () => new Set(attention.items.map((i) => i.pipelineId)) as Set<PipelineId>,
-    [attention.items],
-  );
+  const allIncidents = useAllIncidentsFromStore();
+  const attentionIncidents = useMemo(() => allIncidents.filter((i) => ATTENTION_STATUSES.has(i.status)), [allIncidents]);
+
+  const { data: recent } = usePipelines({ sortKey: "startTime", sortDirection: "desc", pageSize: 6 });
 
   return (
     <div className="flex flex-col">
       <PageHeader
         title="Pipeline Overview"
-        description={
-          USE_LIVE_API
-            ? "Health of every pipeline in the connected Databricks workspace, in UTC."
-            : "Health of the SAP material, procurement, sales, and gold integration pipeline, across all countries, in UTC."
-        }
+        description="Health of the SAP material master, procurement, and sales & manufacturing pipelines, across all 10 countries, in UTC."
+        actions={<OverviewSettingsPanel settings={settings} onChange={setSettings} />}
       />
 
       <div className="flex flex-col gap-5 p-4 sm:p-6">
-        {metricsError ? (
-          <ErrorState description={metricsError} onRetry={refresh} />
-        ) : (
-          <KpiGrid metrics={metrics} isLoading={metricsLoading} />
-        )}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          <KpiCard label="Total Pipelines" value={formatNumber(kpis.totalPipelines)} supportingText="10 countries × 3 pipelines" icon={Activity} accent="accent" />
+          <KpiCard
+            label="Failed Pipelines"
+            value={formatNumber(kpis.failedPipelines)}
+            deltaIsGood={false}
+            supportingText={`of ${kpis.totalPipelines} total`}
+            icon={AlertOctagon}
+            accent="danger"
+          />
+          <KpiCard label="Pipeline Success Rate" value={formatPercent(kpis.successRatePct)} supportingText="based on successful pipelines" icon={CheckCircle2} accent="success" />
+          <KpiCard label="Max Pipeline Run Duration" value={formatDuration(kpis.maxDurationMinutes)} supportingText="configurable ceiling" icon={Timer} accent="neutral" />
+          <KpiCard label="Average Pipeline Run Duration" value={formatDuration(kpis.avgDurationMinutes)} supportingText="configurable baseline" icon={Gauge} accent="neutral" />
+        </div>
 
-        {USE_LIVE_API ? (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <Card>
             <CardHeader
-              title="Databricks Jobs"
-              description="Latest run status of every job in the connected workspace."
-              icon={<Workflow className="size-4" />}
+              title="Pipeline Health Check-up"
+              description="Health score and optimization status for every pipeline, based on runtime."
+              icon={<HeartPulse className="size-4" />}
             />
-            <LiveJobsSummary />
+            <div className="flex items-center justify-between gap-4 px-5 py-4">
+              <p className="text-sm text-text-secondary">
+                {pipelines.filter((p) => p.optimizationRequired).length} of {pipelines.length} pipelines currently flagged for optimization.
+              </p>
+              <Link
+                href="/pipelines/health"
+                className="inline-flex h-9 shrink-0 items-center justify-center rounded-lg bg-accent-500 px-4 text-sm font-medium text-white shadow-xs transition-colors hover:bg-accent-600"
+              >
+                Check Pipeline Health
+              </Link>
+            </div>
           </Card>
-        ) : (
+
           <Card>
             <CardHeader
-              title="Pipeline Dependency"
-              description="Job 1 feeds Job 2's two branches; both must succeed before Job 3 writes the gold table."
-              icon={<Workflow className="size-4" />}
+              title="Data Quality Check-up"
+              description="Row counts, load freshness, and DQ pass/fail for every table in ai_dataops_poc.sap_demo."
+              icon={<Database className="size-4" />}
             />
-            <PipelineDependencyDiagram attentionPipelineIds={attentionPipelineIds} />
+            <div className="flex items-center justify-between gap-4 px-5 py-4">
+              <p className="text-sm text-text-secondary">7 tables monitored in the sap_demo schema.</p>
+              <Link
+                href="/data-quality"
+                className="inline-flex h-9 shrink-0 items-center justify-center rounded-lg bg-accent-500 px-4 text-sm font-medium text-white shadow-xs transition-colors hover:bg-accent-600"
+              >
+                Check Data Quality
+              </Link>
+            </div>
           </Card>
-        )}
+        </div>
 
         <IncidentQueueCard
           title="Incidents Needing Attention"
           description="Open investigations, pending approvals, and failed remediations."
-          incidents={attention.items}
+          incidents={attentionIncidents}
           emptyTitle="No open incidents"
           emptyDescription="Every pipeline failure has been investigated, remediated, and resolved."
           viewAllHref="/incidents"

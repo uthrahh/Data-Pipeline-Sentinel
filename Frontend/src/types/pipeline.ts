@@ -86,3 +86,44 @@ export interface PipelineExecutionQuery {
   page?: number;
   pageSize?: number;
 }
+
+/**
+ * The three pipeline categories, replicated across all 10 countries for the
+ * 30-pipeline overview (Pipeline Health Check-up, Data Quality Check-up).
+ * These map 1:1 onto the existing `material_master_processing` /
+ * `procurement_processing` / `sales_processing` entries in
+ * sapPipelineConfig.ts's PIPELINES — `gold_integration` is a global,
+ * cross-country pipeline and isn't one of the 30 per-country ones.
+ */
+export type PipelineCategory = "material_master_processing" | "procurement_processing" | "sales_processing";
+
+/**
+ * One of the 30 first-class pipelines (10 countries x 3 categories) shown on
+ * the Overview KPIs and the Pipeline Health Check-up list. Distinct from
+ * `PipelineExecution` (a single run) — this is the pipeline *entity*, built
+ * from its most recent execution plus configurable runtime baselines used to
+ * compute a health score.
+ */
+export interface PipelineSummary {
+  id: string;
+  category: PipelineCategory;
+  name: string;
+  country: CountryCode;
+  status: PipelineExecutionStatus;
+  lastRunId: string;
+  scheduledTime: string;
+  actualCompletionTime: string | null;
+  durationMinutes: number | null;
+  /** Configurable baseline this pipeline is judged against — see lib/overviewSettings.ts. */
+  avgRuntimeMinutes: number;
+  maxRuntimeMinutes: number;
+  slaMinutes: number;
+  owner: string;
+  ownerEmail: string;
+  incidentId: string | null;
+  sourceTables: string[];
+  targetTable: string;
+  /** 0-100, derived from durationMinutes vs. avg/max runtime — see lib/pipelineHealth.ts. */
+  healthScore: number;
+  optimizationRequired: boolean;
+}

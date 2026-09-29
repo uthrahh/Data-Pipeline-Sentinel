@@ -71,15 +71,18 @@ export const PIPELINES: PipelineDefinition[] = [
   },
 ];
 
-/**
- * Preserved exactly as provided by the product spec: the fourth environment
- * is labeled "Germany" under the BE code. Not a typo — do not "correct" it.
- */
+/** 10 countries x 3 pipeline categories (material master, procurement, sales) = 30 pipelines. */
 export const COUNTRIES: CountryDefinition[] = [
   { code: "US", label: "United States" },
   { code: "CA", label: "Canada" },
+  { code: "MX", label: "Mexico" },
+  { code: "GB", label: "United Kingdom" },
+  { code: "DE", label: "Germany" },
+  { code: "FR", label: "France" },
   { code: "SG", label: "Singapore" },
-  { code: "BE", label: "Germany" },
+  { code: "IN", label: "India" },
+  { code: "AU", label: "Australia" },
+  { code: "JP", label: "Japan" },
 ];
 
 const jobById = new Map(JOBS.map((j) => [j.id, j]));

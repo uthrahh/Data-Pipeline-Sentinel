@@ -3,10 +3,12 @@
  */
 
 /**
- * The four countries this SAP pipeline environment runs in. Fixed by product
- * scope — see config/sapPipelineConfig.ts for display labels.
+ * The ten countries this SAP pipeline environment runs in — each with 3
+ * pipelines (Material Master, Procurement, Sales & Manufacturing), for 30
+ * pipelines total. Fixed by product scope — see config/sapPipelineConfig.ts
+ * for display labels.
  */
-export type CountryCode = "US" | "CA" | "SG" | "BE";
+export type CountryCode = "US" | "CA" | "MX" | "GB" | "DE" | "FR" | "SG" | "IN" | "AU" | "JP";
 
 export type Environment = "PROD" | "UAT" | "DEV";
 

@@ -14,32 +14,34 @@ export function formatDuration(minutes: number | null): string {
   return rem > 0 ? `${hours}h ${rem}m` : `${hours}h`;
 }
 
+const MONTH_ABBR = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+function pad2(n: number): string {
+  return String(n).padStart(2, "0");
+}
+
 // All timestamps in the mock data are UTC, and the dashboard explicitly labels
 // itself as UTC (see PageHeader copy) — so formatting is pinned to UTC rather
 // than the viewer's local timezone, keeping displayed times consistent for
 // every user regardless of where they are.
+//
+// The hour/minute part is built manually rather than via
+// toLocaleString(..., { hour12: false }): that combination is genuinely
+// inconsistent across ICU implementations for the midnight hour — some
+// render "00:xx", others "24:xx" — which caused a real SSR/client hydration
+// mismatch here (found via a real ai_dataops_poc.sap_demo timestamp that
+// happens to land exactly at 00:xx UTC). getUTCHours()/getUTCMinutes() have
+// no such ambiguity.
 export function formatDateTime(iso: string | null): string {
   if (!iso) return "—";
   const d = new Date(iso);
-  return d.toLocaleString("en-US", {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-    timeZone: "UTC",
-  });
+  return `${MONTH_ABBR[d.getUTCMonth()]} ${d.getUTCDate()}, ${pad2(d.getUTCHours())}:${pad2(d.getUTCMinutes())}`;
 }
 
 export function formatTime(iso: string | null): string {
   if (!iso) return "—";
   const d = new Date(iso);
-  return d.toLocaleTimeString("en-US", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-    timeZone: "UTC",
-  });
+  return `${pad2(d.getUTCHours())}:${pad2(d.getUTCMinutes())}`;
 }
 
 export function formatDate(iso: string | null): string {

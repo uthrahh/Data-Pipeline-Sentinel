@@ -6,7 +6,7 @@ import { StatusBadge } from "@/components/common/StatusBadge";
 import { EmptyState } from "@/components/common/EmptyState";
 import { ErrorState } from "@/components/common/ErrorState";
 import { TableRowsSkeleton } from "@/components/common/LoadingState";
-import { INCIDENT_STATUS_STYLES, SEVERITY_STYLES } from "@/lib/constants";
+import { FAILURE_TYPE_STYLES, INCIDENT_STATUS_STYLES, SEVERITY_STYLES } from "@/lib/constants";
 import { cn, formatDateTime, truncate } from "@/lib/utils";
 import { getCountryLabel } from "@/config/sapPipelineConfig";
 
@@ -38,6 +38,7 @@ export function IncidentsTable({ incidents, isLoading, error }: IncidentsTablePr
             <th className="px-4 py-2.5">Incident</th>
             <th className="px-4 py-2.5">Pipeline</th>
             <th className="px-4 py-2.5">Country</th>
+            <th className="px-4 py-2.5">Failure Type</th>
             <th className="px-4 py-2.5">Detected</th>
             <th className="px-4 py-2.5">Status</th>
             <th className="px-4 py-2.5">Recommendation / Error</th>
@@ -46,7 +47,7 @@ export function IncidentsTable({ incidents, isLoading, error }: IncidentsTablePr
         </thead>
         <tbody>
           {isLoading ? (
-            <TableRowsSkeleton rows={6} cols={8} />
+            <TableRowsSkeleton rows={6} cols={9} />
           ) : (
             incidents.map((incident) => (
               <tr
@@ -66,6 +67,9 @@ export function IncidentsTable({ incidents, isLoading, error }: IncidentsTablePr
                 <td className="whitespace-nowrap px-4 py-3 font-mono text-[11px] text-text-tertiary">{incident.incidentId}</td>
                 <td className="px-4 py-3 font-medium text-text-primary">{incident.pipelineName}</td>
                 <td className="whitespace-nowrap px-4 py-3 text-text-secondary">{getCountryLabel(incident.country)}</td>
+                <td className="whitespace-nowrap px-4 py-3">
+                  <StatusBadge style={FAILURE_TYPE_STYLES[incident.failure.errorType]} />
+                </td>
                 <td className="whitespace-nowrap px-4 py-3 text-text-secondary">{formatDateTime(incident.detectedAt)}</td>
                 <td className="px-4 py-3">
                   <StatusBadge style={INCIDENT_STATUS_STYLES[incident.status]} pulse={incident.status === "REMEDIATING"} />

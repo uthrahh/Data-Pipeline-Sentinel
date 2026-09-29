@@ -1,27 +1,38 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { PageHeader } from "@/components/common/PageHeader";
 import { IncidentFilters } from "@/components/incident/IncidentFilters";
 import { IncidentsTable } from "@/components/incident/IncidentsTable";
-import { useIncidents } from "@/hooks/useIncidents";
+import { useAllIncidentsFromStore } from "@/lib/incidentStore";
 import type { IncidentFilters as IncidentFiltersType } from "@/types";
 
 export default function IncidentsPage() {
   const [filters, setFilters] = useState<IncidentFiltersType>({});
-  const { data, isLoading, error } = useIncidents(filters);
+  const allIncidents = useAllIncidentsFromStore();
+
+  const filtered = useMemo(() => {
+    let items = [...allIncidents].sort((a, b) => (a.detectedAt < b.detectedAt ? 1 : -1));
+    if (filters.search) {
+      const q = filters.search.toLowerCase();
+      items = items.filter(
+        (i) => i.pipelineName.toLowerCase().includes(q) || i.incidentId.toLowerCase().includes(q) || i.failure.errorMessage.toLowerCase().includes(q),
+      );
+    }
+    if (filters.status && filters.status.length > 0) items = items.filter((i) => filters.status!.includes(i.status));
+    if (filters.severity && filters.severity.length > 0) items = items.filter((i) => filters.severity!.includes(i.severity));
+    if (filters.country && filters.country.length > 0) items = items.filter((i) => i.country !== undefined && filters.country!.includes(i.country));
+    return items;
+  }, [allIncidents, filters]);
 
   return (
     <div className="flex flex-col">
-      <PageHeader
-        title="Incidents"
-        description="Every pipeline failure, from detection through resolution."
-      />
+      <PageHeader title="Incidents" description="Every pipeline failure, from detection through resolution — all 6 failure types." />
 
       <div className="p-4 sm:p-6">
         <div className="overflow-hidden rounded-xl border border-border bg-surface">
-          <IncidentFilters filters={filters} onChange={setFilters} resultCount={data.total} />
-          <IncidentsTable incidents={data.items} isLoading={isLoading} error={error} />
+          <IncidentFilters filters={filters} onChange={setFilters} resultCount={filtered.length} />
+          <IncidentsTable incidents={filtered} isLoading={false} error={null} />
         </div>
       </div>
     </div>

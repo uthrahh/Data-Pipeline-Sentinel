@@ -47,6 +47,13 @@ export function getLifecycleSteps(status: IncidentStatus, hasAgentAnalysis: bool
     VALIDATION_FAILED: 6,
     RESOLVED: 7,
     REJECTED: 4,
+    // FAILED = closed with no remediation attempted (Schema Change, Unknown
+    // Error, a declined DQ Breach, or a Permission Issue) — stops at the
+    // recommendation/notification stage, same as REJECTED.
+    FAILED: 4,
+    // SUCCESS_PARTIAL = the pipeline did complete, just with a DQ/SLA
+    // caveat — treated as reaching the end, same as RESOLVED.
+    SUCCESS_PARTIAL: 7,
   };
 
   const failedAt: Partial<Record<IncidentStatus, number>> = {
@@ -56,6 +63,7 @@ export function getLifecycleSteps(status: IncidentStatus, hasAgentAnalysis: bool
 
   const stoppedAt: Partial<Record<IncidentStatus, number>> = {
     REJECTED: 4,
+    FAILED: 4,
   };
 
   const current = reachedIndex[status];

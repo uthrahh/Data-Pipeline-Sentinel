@@ -4,3 +4,5 @@ export * from "./sap";
 export * from "./incident";
 export * from "./metrics";
 export * from "./agent";
+export * from "./dataQuality";
+export * from "./notification";

@@ -4,6 +4,13 @@ import type { PipelineId } from "./pipeline";
 /**
  * Incident lifecycle. Mirrors the backend state machine:
  * Detect -> Investigate -> DQ/SLA -> Recommend -> Approve -> Remediate -> Validate -> Resolve
+ *
+ * SUCCESS_PARTIAL: pipeline technically succeeded but DQ or SLA exceeded its
+ * configured limit — optimization required, a Notification is generated.
+ * FAILED: closed with no remediation (Schema Change / Unknown Error / a
+ * Permission Issue or DQ Breach the user chose to notify rather than run) —
+ * distinct from REMEDIATION_FAILED, which means a rerun/restart was
+ * attempted and failed.
  */
 export type IncidentStatus =
   | "OPEN"
@@ -15,9 +22,22 @@ export type IncidentStatus =
   | "VALIDATING"
   | "VALIDATION_FAILED"
   | "RESOLVED"
-  | "REJECTED";
+  | "REJECTED"
+  | "SUCCESS_PARTIAL"
+  | "FAILED";
 
-export type FailureType = "UserError" | "SystemError" | "InfrastructureError" | "DataError";
+/**
+ * The six failure types the Investigation Agent classifies every incident
+ * into. Each has a different auto-resolve/approval/notification workflow —
+ * see lib/failureWorkflow.ts for the exact rules per type.
+ */
+export type FailureType =
+  | "TRANSIENT_JOB_FAILURE"
+  | "KNOWN_TASK_RESTART"
+  | "SCHEMA_CHANGE"
+  | "UNKNOWN_ERROR"
+  | "DATA_QUALITY_BREACH"
+  | "PERMISSION_ISSUE";
 
 export interface IncidentFailure {
   errorCode: string;
@@ -127,6 +147,23 @@ export interface AuditEvent {
   detail: string | null;
 }
 
+/**
+ * Shown on a RESOLVED (or otherwise investigated-to-completion) incident's
+ * detail page and added to the CI/CD regression suite: proof that the
+ * scenario that caused this incident is now covered by an automated check,
+ * so a future deployment can't silently reintroduce it.
+ */
+export interface RegressionTestCase {
+  testId: string;
+  scenario: string;
+  expectedBehavior: string;
+  expectedClassification: string;
+  expectedWorkflow: string;
+  expectedRemediation: string;
+  expectedFinalState: string;
+  addedToCiCdAt: string;
+}
+
 export interface Incident {
   incidentId: string;
   pipelineRunId: string;
@@ -137,7 +174,9 @@ export interface Incident {
   status: IncidentStatus;
   severity: Severity;
   detectedAt: string;
+  /** The pipeline owner responsible for this incident — who any generated notification is addressed to. */
   assignee: string | null;
+  assigneeEmail: string | null;
   failure: IncidentFailure;
   investigation: Investigation | null;
   dq: DQResult | null;
@@ -148,6 +187,8 @@ export interface Incident {
   remediation: Remediation | null;
   postValidation: PostValidation | null;
   audit: AuditEvent[];
+  regressionTest: RegressionTestCase | null;
+  notificationId: string | null;
 }
 
 export interface IncidentFilters {

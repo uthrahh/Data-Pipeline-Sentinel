@@ -1,6 +1,8 @@
 import type {
   CheckStatus,
+  FailureType,
   IncidentStatus,
+  NotificationStatus,
   PipelineExecutionStatus,
   RemediationRunStatus,
   RiskLevel,
@@ -89,6 +91,72 @@ export const INCIDENT_STATUS_STYLES: Record<IncidentStatus, StatusStyle> = {
   },
   RESOLVED: {
     label: "Resolved",
+    dot: "bg-success-500",
+    badgeClass: "bg-success-50 text-success-700 ring-1 ring-inset ring-success-500/20",
+  },
+  REJECTED: {
+    label: "Rejected",
+    dot: "bg-neutral-500",
+    badgeClass: "bg-neutral-50 text-neutral-600 ring-1 ring-inset ring-neutral-500/20",
+  },
+  SUCCESS_PARTIAL: {
+    label: "Success - Partial",
+    dot: "bg-warning-500",
+    badgeClass: "bg-warning-50 text-warning-700 ring-1 ring-inset ring-warning-500/20",
+  },
+  FAILED: {
+    label: "Failed - No Remediation",
+    dot: "bg-danger-500",
+    badgeClass: "bg-danger-50 text-danger-700 ring-1 ring-inset ring-danger-500/20",
+  },
+};
+
+export const FAILURE_TYPE_STYLES: Record<FailureType, StatusStyle> = {
+  TRANSIENT_JOB_FAILURE: {
+    label: "Transient Job Failure",
+    dot: "bg-info-500",
+    badgeClass: "bg-info-50 text-info-700 ring-1 ring-inset ring-info-500/20",
+  },
+  KNOWN_TASK_RESTART: {
+    label: "Known Task Restart",
+    dot: "bg-info-500",
+    badgeClass: "bg-info-50 text-info-700 ring-1 ring-inset ring-info-500/20",
+  },
+  SCHEMA_CHANGE: {
+    label: "Schema Change",
+    dot: "bg-danger-500",
+    badgeClass: "bg-danger-50 text-danger-700 ring-1 ring-inset ring-danger-500/20",
+  },
+  UNKNOWN_ERROR: {
+    label: "Unknown Error",
+    dot: "bg-neutral-500",
+    badgeClass: "bg-neutral-50 text-neutral-600 ring-1 ring-inset ring-neutral-500/20",
+  },
+  DATA_QUALITY_BREACH: {
+    label: "Data Quality Breach",
+    dot: "bg-warning-500",
+    badgeClass: "bg-warning-50 text-warning-700 ring-1 ring-inset ring-warning-500/20",
+  },
+  PERMISSION_ISSUE: {
+    label: "Permission Issue",
+    dot: "bg-danger-500",
+    badgeClass: "bg-danger-50 text-danger-700 ring-1 ring-inset ring-danger-500/20",
+  },
+};
+
+export const NOTIFICATION_STATUS_STYLES: Record<NotificationStatus, StatusStyle> = {
+  DRAFT: {
+    label: "Draft",
+    dot: "bg-neutral-500",
+    badgeClass: "bg-neutral-50 text-neutral-600 ring-1 ring-inset ring-neutral-500/20",
+  },
+  WAITING_APPROVAL: {
+    label: "Waiting Approval",
+    dot: "bg-accent-500",
+    badgeClass: "bg-accent-50 text-accent-700 ring-1 ring-inset ring-accent-500/25",
+  },
+  SENT: {
+    label: "Sent",
     dot: "bg-success-500",
     badgeClass: "bg-success-50 text-success-700 ring-1 ring-inset ring-success-500/20",
   },

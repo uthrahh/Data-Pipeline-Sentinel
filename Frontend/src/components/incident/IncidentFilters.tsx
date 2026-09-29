@@ -16,6 +16,8 @@ const STATUS_OPTIONS = [
   { value: "VALIDATION_FAILED", label: "Validation Failed" },
   { value: "RESOLVED", label: "Resolved" },
   { value: "REJECTED", label: "Rejected" },
+  { value: "SUCCESS_PARTIAL", label: "Success - Partial" },
+  { value: "FAILED", label: "Failed - No Remediation" },
 ];
 
 const SEVERITY_OPTIONS = [

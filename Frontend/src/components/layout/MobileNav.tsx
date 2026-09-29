@@ -4,14 +4,14 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { createPortal } from "react-dom";
 import { useEffect, useState } from "react";
-import { Activity, AlertOctagon, Gauge, LayoutGrid, LineChart, Wrench, X } from "lucide-react";
+import { Activity, AlertOctagon, Gauge, LayoutGrid, LineChart, Mail, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
   { href: "/overview", label: "Overview", icon: LayoutGrid },
   { href: "/pipelines", label: "Pipelines", icon: Activity },
   { href: "/incidents", label: "Incidents", icon: AlertOctagon },
-  { href: "/remediation", label: "Remediation", icon: Wrench },
+  { href: "/notifications", label: "Notifications", icon: Mail },
   { href: "/analytics", label: "Analytics", icon: LineChart },
 ];
 

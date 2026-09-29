@@ -306,9 +306,10 @@ function mapIncident(row: RawIncidentRow): Incident {
     severity: (row.severity ?? "MEDIUM") as Severity,
     detectedAt: row.detected_at,
     assignee: null,
+    assigneeEmail: null,
     failure: {
       errorCode: row.result_state ?? "UNKNOWN",
-      errorType: (row.error_type as Incident["failure"]["errorType"]) ?? "SystemError",
+      errorType: (row.error_type as Incident["failure"]["errorType"]) ?? "UNKNOWN_ERROR",
       errorMessage: row.error_message ?? "No error message reported.",
       target: null,
       runPageUrl: row.run_page_url,
@@ -322,6 +323,8 @@ function mapIncident(row: RawIncidentRow): Incident {
     remediation: mapRemediation(row),
     postValidation: null,
     audit: mapAudit(row),
+    regressionTest: null,
+    notificationId: null,
   };
 }
 
