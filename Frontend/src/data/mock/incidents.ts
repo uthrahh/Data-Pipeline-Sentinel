@@ -114,6 +114,11 @@ const HAND_AUTHORED_INCIDENTS: IncidentDraft[] = [
       addedToCiCdAt: "2026-09-29T02:11:10Z",
     },
     notificationId: null,
+    executionType: "JOB",
+    issueType: "SOURCE_UNAVAILABLE",
+    guardrailId: "AUTO_RERUN_GUARDRAIL",
+    guardrailDecision: "AUTO_APPROVED",
+    finalMessage: "Resolved automatically — cluster restarted, rerun succeeded, DQ and SLA both passed.",
   },
 
   // ============================================================
@@ -205,6 +210,10 @@ const HAND_AUTHORED_INCIDENTS: IncidentDraft[] = [
       addedToCiCdAt: "2026-09-29T02:18:05Z",
     },
     notificationId: "NOTIF-T1002",
+    executionType: "JOB",
+    issueType: "CLUSTER_TERMINATED",
+    guardrailId: "AUTO_RERUN_GUARDRAIL",
+    guardrailDecision: "AUTO_APPROVED_FIRST_ATTEMPT",
   },
 
   // ============================================================
@@ -292,6 +301,11 @@ const HAND_AUTHORED_INCIDENTS: IncidentDraft[] = [
       addedToCiCdAt: "2026-09-29T02:24:20Z",
     },
     notificationId: null,
+    executionType: "JOB",
+    issueType: "TASK_RESTART_EXECUTOR_STARVATION",
+    guardrailId: "AUTO_RESTART_GUARDRAIL",
+    guardrailDecision: "AUTO_APPROVED",
+    finalMessage: "Resolved automatically — task restarted, rerun succeeded, DQ and SLA both passed.",
   },
 
   // ============================================================
@@ -382,6 +396,10 @@ const HAND_AUTHORED_INCIDENTS: IncidentDraft[] = [
       addedToCiCdAt: "2026-09-29T02:22:40Z",
     },
     notificationId: "NOTIF-K1004",
+    executionType: "JOB",
+    issueType: "TASK_RESTART_EXECUTOR_STARVATION",
+    guardrailId: "AUTO_RESTART_GUARDRAIL",
+    guardrailDecision: "AUTO_APPROVED_FIRST_ATTEMPT",
   },
 
   // ============================================================
@@ -464,6 +482,9 @@ const HAND_AUTHORED_INCIDENTS: IncidentDraft[] = [
       addedToCiCdAt: "2026-09-29T02:14:10Z",
     },
     notificationId: "NOTIF-S1005",
+    executionType: "JOB",
+    issueType: "SCHEMA_MISMATCH_NEW_COLUMN",
+    finalMessage: "Closed — schema change notification sent to data engineering; no automatic remediation attempted.",
   },
 
   // ============================================================
@@ -540,6 +561,9 @@ const HAND_AUTHORED_INCIDENTS: IncidentDraft[] = [
       addedToCiCdAt: "2026-09-29T02:11:10Z",
     },
     notificationId: "NOTIF-U1006",
+    executionType: "JOB",
+    issueType: "UNRECOGNIZED_EXCEPTION",
+    finalMessage: "Closed — notification sent to on-call; no automatic remediation attempted.",
   },
 
   // ============================================================
@@ -610,6 +634,8 @@ const HAND_AUTHORED_INCIDENTS: IncidentDraft[] = [
     ],
     regressionTest: null,
     notificationId: null,
+    executionType: "JOB",
+    issueType: "NULL_THRESHOLD_BREACH",
   },
 
   // ============================================================
@@ -693,6 +719,9 @@ const HAND_AUTHORED_INCIDENTS: IncidentDraft[] = [
       addedToCiCdAt: "2026-09-29T02:09:10Z",
     },
     notificationId: "NOTIF-D1008",
+    executionType: "JOB",
+    issueType: "EMPTY_TABLE",
+    finalMessage: "Closed — notification sent to SAP data owner; user declined to run against empty data.",
   },
 
   // ============================================================
@@ -753,6 +782,8 @@ const HAND_AUTHORED_INCIDENTS: IncidentDraft[] = [
     ],
     regressionTest: null,
     notificationId: "NOTIF-P1009",
+    executionType: "JOB",
+    issueType: "MISSING_USE_CATALOG_GRANT",
   },
 
   // ============================================================
@@ -832,6 +863,11 @@ const HAND_AUTHORED_INCIDENTS: IncidentDraft[] = [
     ],
     regressionTest: null,
     notificationId: "NOTIF-T1010",
+    executionType: "JOB",
+    issueType: "CONNECTION_RESET",
+    guardrailId: "AUTO_RERUN_GUARDRAIL",
+    guardrailDecision: "AUTO_APPROVED",
+    finalMessage: "Rerun succeeded but exceeded SLA — marked Success - Partial, optimization notification drafted.",
   },
 ];
 
@@ -875,6 +911,11 @@ function buildAutoIncidents(): Incident[] {
     audit: [audit("Failure detected", "system", p.scheduledTime, null), audit("Auto-resolved on rerun", "system", p.scheduledTime, null)],
     regressionTest: null,
     notificationId: null,
+    executionType: "JOB",
+    issueType: "CLUSTER_TERMINATED",
+    guardrailId: "AUTO_RERUN_GUARDRAIL",
+    guardrailDecision: "AUTO_APPROVED",
+    finalMessage: "Resolved automatically — cluster restarted, rerun succeeded, DQ and SLA both passed.",
   }));
 }
 

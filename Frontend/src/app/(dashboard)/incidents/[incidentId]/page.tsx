@@ -18,6 +18,7 @@ import { AuditTimeline } from "@/components/pipeline/AuditTimeline";
 import { RegressionTestCard } from "@/components/incident/RegressionTestCard";
 import { NotificationLinkCard } from "@/components/incident/NotificationLinkCard";
 import { DataQualityDecisionPanel } from "@/components/incident/DataQualityDecisionPanel";
+import { OperationalMetadataCard } from "@/components/incident/OperationalMetadataCard";
 import { formatDateTime } from "@/lib/utils";
 
 function Field({ label, value }: { label: string; value: ReactNode }) {
@@ -88,6 +89,8 @@ export default function IncidentDetailPage() {
         </div>
 
         <FailureDetails incident={incident} />
+
+        <OperationalMetadataCard incident={incident} />
 
         {isDqBreachUndecided && <DataQualityDecisionPanel incident={incident} />}
 

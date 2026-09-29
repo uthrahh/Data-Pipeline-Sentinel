@@ -108,6 +108,7 @@ export function sendNotification(id: string, approvedBy: string) {
       updateIncident(current.incidentId, {
         status: "FAILED",
         approval: { requestedAt: current.createdAt, decidedAt: nowIso(), decidedBy: approvedBy, decision: "APPROVED", rejectionReason: null },
+        finalMessage: `Closed — notification sent to ${current.recipient}, approved by ${approvedBy}. No automatic remediation attempted.`,
       });
     }
   }
@@ -124,6 +125,7 @@ export function rejectNotification(id: string, rejectedBy: string) {
       updateIncident(current.incidentId, {
         status: "REJECTED",
         approval: { requestedAt: current.createdAt, decidedAt: nowIso(), decidedBy: rejectedBy, decision: "REJECTED", rejectionReason: "Declined from the Notification tab." },
+        finalMessage: `Rejected by ${rejectedBy} — notification was not sent.`,
       });
     }
   }

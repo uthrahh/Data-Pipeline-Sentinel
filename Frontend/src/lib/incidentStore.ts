@@ -63,6 +63,7 @@ export function runDataQualityRemediation(incidentId: string, now: string = new 
       error: null,
     },
     postValidation: { dqStatus: current.dq?.status === "COMPLETE" ? "FAIL" : "NOT_AVAILABLE", slaStatus: current.sla?.status ?? "NOT_AVAILABLE", overallStatus: "FAIL" },
+    finalMessage: "Ran despite the known data quality issue — marked Success - Partial; DQ issue recorded for downstream consumers.",
     audit: [
       ...current.audit,
       { id: `run-${now}`, timestamp: now, label: "User selected Run", actor: "human", detail: "Ran despite the known data quality issue." },

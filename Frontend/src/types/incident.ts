@@ -189,6 +189,22 @@ export interface Incident {
   audit: AuditEvent[];
   regressionTest: RegressionTestCase | null;
   notificationId: string | null;
+  /**
+   * Metrics carried by the separately-deployed ai-dataops-assistant system's
+   * incident API (a different app, different data shape) — kept here as
+   * plain optional fields rather than restructuring this model's status
+   * handling to match it. approvalStatus/remediationStatus/validationStatus
+   * are intentionally NOT duplicated as fields — they're derived from
+   * approval/remediation/postValidation (see lib/operationalStatus.ts) so
+   * there's exactly one source of truth for each.
+   */
+  executionType?: "JOB" | "PIPELINE" | null;
+  guardrailId?: string | null;
+  guardrailDecision?: string | null;
+  issueType?: string | null;
+  /** Distinct field from `severity` in the reference API's shape; left null unless it adds real signal beyond severity (it usually doesn't). */
+  criticality?: Severity | null;
+  finalMessage?: string | null;
 }
 
 export interface IncidentFilters {
