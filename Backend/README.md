@@ -1,11 +1,21 @@
-# Sentinel Pipeline Backend
+# Sentinel Pipeline Backend (legacy, not currently used by the deployed frontend)
 
-Minimal, purpose-built FastAPI backend for the Sentinel AI Pipeline frontend
-(`../Frontend`). Every response is backed by real Databricks data — no
-mocks, no LLM agents, no fabricated narrative.
+> **Status:** `../Frontend` no longer calls this backend. Its live pages
+> (Overview, Pipeline Health, Incidents) were rewired to fetch from a
+> separate, already-existing Databricks App (`ai-dataops-assistant`) instead
+> — see [`../Frontend/README.md`](../Frontend/README.md#live-data-source).
+> `Frontend/app.yaml`'s `DATABRICKS_APP_URL` now points at that app, not
+> this one. This FastAPI service, its Jobs-API-backed pipeline monitoring,
+> and its own `sentinel_pipeline.ops.incidents` Delta table are kept here
+> for reference and possible future use, but nothing in production reads
+> from them right now.
+
+Minimal, purpose-built FastAPI backend originally built for the Sentinel AI
+Pipeline frontend (`../Frontend`). Every response is backed by real
+Databricks data — no mocks, no LLM agents, no fabricated narrative.
 
 **Live**: `https://sentinel-pipeline-backend-7474652936146529.aws.databricksapps.com`
-(runs as a Databricks App — see below)
+(still deployed and reachable, just not called by the frontend anymore)
 
 ## Test pipelines
 
