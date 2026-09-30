@@ -1,126 +1,76 @@
-# Sentinel AI Pipeline
+# Sentinel AI Pipeline — Frontend (static branch)
 
-A Databricks pipeline monitoring and governed-remediation platform: live job
-status, an incident queue backed by real failed runs, selective
-remediation (a real re-run triggered via the Databricks Jobs API) — safe,
-transient-looking failures are auto-remediated immediately, everything else
-waits for human approval — and execution analytics.
+A fully static, no-backend build of the SAP pipeline observability and
+incident console. Every page renders from deterministic, hand-authored or
+once-snapshotted fixture data — there is no fetch, no API call, no
+environment-driven backend switch. This is the branch deployed to Vercel.
 
-**Live**: `https://sentinel-pipeline-frontend-7474652936146529.aws.databricksapps.com`
-(Databricks-authenticated users only — see Deployment below)
+## No live mode here, on purpose
 
-## Two data modes
+`src/lib/liveMode.ts` hardcodes `USE_LIVE_API = false` — not env-driven —
+specifically so this branch can never be accidentally pointed at a live
+backend via a misconfigured env var on Vercel:
 
-- **Mock mode** (default): realistic fixture data, no backend required.
-  `npm install && npm run dev`, open http://localhost:3000.
-- **Live mode**: real data from `../Backend` (see that project's README).
-  Set in `.env.local`:
-  ```
-  NEXT_PUBLIC_API_URL=http://localhost:8000
-  NEXT_PUBLIC_USE_LIVE_API=true
-  ```
-  Run the backend locally first (`cd ../Backend && uvicorn app:app --port 8000`).
+```ts
+export const USE_LIVE_API = false;
+```
 
-Mock and live mode use the exact same components/hooks/pages — only the
-`services/*Service.ts` implementation differs
-(`Mock*Service` vs `Api*Service`), selected by `NEXT_PUBLIC_USE_LIVE_API`.
+The live, Databricks-backed versions of this same UI (fetching from a real
+Databricks App) live on the `n-live` and `h-live` branches of this repo —
+see those branches' READMEs for how they wire up live data.
+
+```bash
+npm install && npm run dev
+# open http://localhost:3000
+```
+
+## What's in the fixtures
+
+- **30 pipelines**: 10 countries (`src/config/sapPipelineConfig.ts`) × 3 SAP
+  pipeline categories (material master, procurement, sales & manufacturing).
+- **Data Quality**: 7 real table schemas pulled once from
+  `ai_dataops_poc.sap_demo` in Unity Catalog and hardcoded as fixtures
+  (`src/data/mock/dataQuality.ts`) — row counts, freshness, and DQ
+  pass/fail are real snapshots, not invented.
+- **Incidents**: 10 hand-authored incidents covering all 6 failure types
+  (Transient Job Failure, Known Task Restart, Schema Change, Unknown Error,
+  Data Quality Breach, Permission Issue), each modeling its own
+  status-machine workflow end to end — investigation, DQ/SLA checks,
+  regression test, notification, and audit trail
+  (`src/data/mock/incidents.ts`).
+- **People/owners**: 10 named people with emails
+  (`src/data/mock/people.ts`); every pipeline has a real
+  `ownerEmail`, and notification recipients are derived from whichever
+  pipeline/incident they're attached to, not hardcoded per-notification.
+
+`src/lib/incidentStore.ts` / `src/lib/notificationStore.ts` keep this data
+in an in-memory, mutable store (via `useSyncExternalStore`) so the demo
+interactions — approving a DQ breach, sending/rejecting a notification —
+actually update the UI across pages, entirely client-side.
 
 ## Architecture
 
 ```
 src/
-  types/        Domain model (Pipeline, Incident, DQ, SLA, Remediation, Audit, Chat, Metrics)
-  lib/           Pure helpers, incl. liveMode.ts (the USE_LIVE_API flag every
-                 service/page reads) and lifecycle.ts (incident stepper — skips
-                 Investigation/DQ/SLA/Recommendation steps entirely when a real,
-                 minimal-backend incident has no agent analysis behind it)
-  data/mock/     Mock-mode fixtures only
-  services/      PipelineService, IncidentService, MetricsService, ChatService +
-                 apiClient. Each has a Mock implementation (fixtures) and an Api
-                 implementation (real backend calls) behind the same interface.
-  hooks/         Data-fetching hooks (usePipelines, useIncident, ...) — identical
-                 regardless of which service implementation is active.
-  components/    dashboard/ · pipeline/ · incident/ · chat/ · layout/ · common/
-  app/           Next.js App Router pages: /overview, /pipelines, /pipelines/[runId],
-                 /incidents, /incidents/[incidentId], /remediation, /analytics
-  app/api/proxy/ Server-side proxy to the backend — see "Deployment" below.
+  types/         Domain model (Pipeline, Incident, DQ, SLA, Notification, Audit, RegressionTest)
+  lib/           liveMode.ts (hardcoded false), overviewSettings, lifecycle (incident
+                 stepper), incidentStore/notificationStore, seededRandom (deterministic
+                 PRNG — avoids Next.js SSR/client hydration mismatches)
+  config/        sapPipelineConfig.ts — 10 countries × 3 pipeline categories
+  data/mock/     All fixture data — the only data source on this branch
+  components/    dashboard/ · pipeline/ · incident/ · layout/ · common/
+  app/           Next.js App Router pages: /overview, /pipelines/health,
+                 /incidents, /incidents/[incidentId], /data-quality, /notifications
 ```
 
-**Lifecycle modeled end-to-end:** Detect → Suggest (a plain, transparent
-error_type → RETRY/ESCALATE rule, not an AI narrative — see
-`Backend/services/incidents_service.py::_suggest_action`) → Approve
-(auto-approved immediately for RETRY suggestions unless the job is HIGH
-severity or has exhausted its auto-retry budget; human-in-the-loop for
-everything else) → Remediate → Resolve. Mock-mode incidents additionally
-model Investigate → DQ/SLA → Recommend stages with an AI-agent narrative;
-live-mode incidents (real failed Databricks runs, no LLM agent behind them)
-skip those stages rather than fake them — see `lib/lifecycle.ts`.
-
-## Deployment
-
-This app is deployed **two ways** simultaneously right now:
-
-### 1. Databricks App (primary, team-only)
-
-Runs as its own Databricks App (`sentinel-pipeline-frontend`), protected by
-Databricks' own SSO — only users granted access in the workspace can open it.
-Because the browser itself can never call the backend's Databricks App
-directly (same SSO wall applies to it), this frontend's own server
-(`src/app/api/proxy/[...path]/route.ts`) proxies every `/api/*` call:
-it exchanges a service-principal `client_id`/`client_secret` for a
-short-lived Databricks OAuth token server-side and forwards the request with
-that token attached. The browser never sees any Databricks credential.
+## Deploying to Vercel
 
 ```bash
-databricks apps create sentinel-pipeline-frontend -p sentinel-apps
-
-databricks sync . "/Workspace/Users/<you>/sentinel-pipeline-frontend" \
-  --exclude "node_modules/**" --exclude ".next/**" --exclude ".env.local" --full -p sentinel-apps
-
-databricks apps deploy sentinel-pipeline-frontend \
-  --source-code-path "/Workspace/Users/<you>/sentinel-pipeline-frontend" -p sentinel-apps
+cd Frontend
+vercel
 ```
 
-Databricks Apps auto-detects `package.json` and runs `npm install`; the
-`app.yaml` `command` handles `npm run build && npm run start`.
-
-**The `DATABRICKS_CLIENT_SECRET` gotcha** (cost real debugging time, worth
-knowing): a secret referenced in `app.yaml` via `valueFrom` must first be
-*attached to the app as a resource* through the API — declaring a
-`resources:` block directly inside `app.yaml` does **not** work, it's
-silently ignored. The working sequence is:
-
-```bash
-databricks secrets create-scope sentinel-pipeline -p sentinel-apps
-databricks secrets put-secret sentinel-pipeline backend-client-secret --string-value '<secret>' -p sentinel-apps
-databricks secrets put-acl sentinel-pipeline <frontend-app-service-principal-id> READ -p sentinel-apps
-
-databricks apps update sentinel-pipeline-frontend --json \
-  '{"resources":[{"name":"backend-client-secret","secret":{"scope":"sentinel-pipeline","key":"backend-client-secret","permission":"READ"}}]}' \
-  -p sentinel-apps
-```
-Only *then* does `app.yaml`'s `env: - name: DATABRICKS_CLIENT_SECRET, valueFrom: "backend-client-secret"` resolve correctly. (Two other syntaxes were tried first and failed: a `resources:` block inline in `app.yaml` — accepted by the CLI with no error, but never actually attached, causing `invalid_client` at runtime; and a `{{secrets/scope/key}}` template string in `value` — passed through completely literally, unresolved.)
-
-Required `app.yaml` env vars: `NEXT_PUBLIC_API_URL=/api/proxy`,
-`NEXT_PUBLIC_USE_LIVE_API=true`, `DATABRICKS_HOST`, `DATABRICKS_APP_URL`
-(the backend's URL), `DATABRICKS_CLIENT_ID` + `DATABRICKS_CLIENT_SECRET`
-(the **backend** app's service-principal credentials — reused here, since
-any principal already granted `CAN_USE` on the backend app and access to its
-data works regardless of where it's calling from).
-
-Granting team access: `databricks apps update-permissions sentinel-pipeline-frontend --json '{"access_control_list":[{"group_name":"users","permission_level":"CAN_USE"}]}'`
-
-### 2. Vercel (optional, public)
-
-The same codebase also deploys to Vercel unmodified. Same proxy mechanism —
-`NEXT_PUBLIC_API_URL=/api/proxy` plus the four `DATABRICKS_*` server-side env
-vars, set as Vercel project environment variables (**Root Directory must be
-set to `Frontend`** in Vercel project settings, since this repo is a
-monorepo with `Frontend/` and `Backend/` siblings). Can be safely removed if
-the Databricks App is the only deployment target needed.
-
-## Connecting a different backend
-
-Set `NEXT_PUBLIC_API_URL` and implement `Api*Service` classes matching the
-existing interfaces in `src/services/`. See `src/services/apiClient.ts` for
-the fetch wrapper.
+Set **Root Directory** to `Frontend` in the Vercel project settings (this
+repo is a monorepo with `Frontend/`/`Backend/` siblings — `vercel.json` in
+this directory pins the build/install commands). No environment variables
+are required.

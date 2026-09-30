@@ -1,4 +1,10 @@
-# Sentinel Pipeline Backend
+# Sentinel Pipeline Backend (not used on this branch)
+
+> **Status:** this is the `static` branch — `../Frontend` is a fully static
+> demo with `USE_LIVE_API` hardcoded `false` and zero backend connection by
+> design (see the root [`README.md`](../README.md)). This FastAPI service is
+> kept here for reference and is what the live branches (`n-live`, `h-live`)
+> build on, but nothing on this branch calls it.
 
 Minimal, purpose-built FastAPI backend for the Sentinel AI Pipeline frontend
 (`../Frontend`). Every response is backed by real Databricks data — no
