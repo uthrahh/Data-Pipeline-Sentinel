@@ -59,10 +59,52 @@ export interface LiveIncidentRow {
 }
 
 export interface LiveIncidentDetail extends LiveIncidentRow {
-  /** Raw agent output — a Python-repr-ish string, not clean JSON. Shown as free text, never parsed as structured data. */
+  /** Markdown-ish agent output (bold `**Section**` headers + bullet lines) — parsed into display sections by lib/parseAgentOutput.ts, never shown as a raw dump. */
   investigation_result: string | null;
   dq_result: string | null;
   sla_result: string | null;
+  failed_task_keys: string | null;
+  task_termination_codes: string | null;
+  termination_code: string | null;
+  termination_type: string | null;
+  trigger_type: string | null;
+  run_type: string | null;
+}
+
+export interface LiveActionResult {
+  success: boolean;
+  action: "APPROVE" | "REJECT" | "REMEDIATE" | "VALIDATE";
+  incident_id: string;
+  result: {
+    status: string;
+    message?: string;
+    [key: string]: unknown;
+  };
+}
+
+export interface LiveIncidentStatus {
+  incident_id: string;
+  status: string | null;
+  approval_status: string | null;
+  remediation_status: string | null;
+  validation_status: string | null;
+  remediation_run_id: string | null;
+  issue_type: string | null;
+  criticality: string | null;
+  guardrail_id: string | null;
+  guardrail_decision: string | null;
+  recommended_action: string | null;
+}
+
+export interface LiveChatReply {
+  role: "assistant";
+  message: string;
+}
+
+export interface LiveHealth {
+  success: boolean;
+  service: string;
+  status: string;
 }
 
 export interface LiveDqCheck {

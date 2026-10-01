@@ -3,7 +3,14 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, BrainCircuit, Sparkles } from "lucide-react";
-import { hydrateIncidentChecks, useIncidentFromStore, useIncidentsLoadStatus, useInitLiveIncidents } from "@/lib/incidentStore";
+import {
+  approveLiveIncident,
+  refreshLiveIncident,
+  rejectLiveIncident,
+  useIncidentFromStore,
+  useIncidentsLoadStatus,
+  useInitLiveIncidents,
+} from "@/lib/incidentStore";
 import { useNotificationFromStore } from "@/lib/notificationStore";
 import { USE_LIVE_API } from "@/lib/liveMode";
 import { fetchIncidentDetail } from "@/services/liveApiService";
@@ -12,9 +19,11 @@ import { EmptyState } from "@/components/common/EmptyState";
 import { LoadingState } from "@/components/common/LoadingState";
 import { Card, CardBody, CardHeader } from "@/components/common/Card";
 import { StatusBadge } from "@/components/common/StatusBadge";
-import { INCIDENT_STATUS_STYLES, SEVERITY_STYLES, FAILURE_TYPE_STYLES } from "@/lib/constants";
+import { INCIDENT_STATUS_STYLES, SEVERITY_STYLES, FAILURE_TYPE_STYLES, CURRENT_USER } from "@/lib/constants";
 import { FailureDetails } from "@/components/pipeline/FailureDetails";
 import { InvestigationPanel } from "@/components/pipeline/InvestigationPanel";
+import { StructuredAgentOutput } from "@/components/pipeline/StructuredAgentOutput";
+import { HumanDecisionPanel } from "@/components/pipeline/HumanDecisionPanel";
 import { DQPanel } from "@/components/pipeline/DQPanel";
 import { SLAPanel } from "@/components/pipeline/SLAPanel";
 import { AuditTimeline } from "@/components/pipeline/AuditTimeline";
@@ -42,16 +51,34 @@ export default function IncidentDetailPage() {
   const notification = useNotificationFromStore(incident?.notificationId ?? "__none__");
   const loadStatus = useIncidentsLoadStatus();
   const [rawInvestigation, setRawInvestigation] = useState<string | null>(null);
+  const [isSubmittingAction, setIsSubmittingAction] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!USE_LIVE_API || !incident) return;
-    hydrateIncidentChecks(incidentId);
+    refreshLiveIncident(incidentId);
     fetchIncidentDetail(incidentId).then((detail) => setRawInvestigation(detail?.investigation_result ?? null));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [incidentId, Boolean(incident)]);
 
+  async function handleApprove(decidedBy: string) {
+    setIsSubmittingAction(true);
+    setActionError(null);
+    const result = await approveLiveIncident(incidentId, decidedBy);
+    setIsSubmittingAction(false);
+    if (!result.ok) setActionError(result.message);
+  }
+
+  async function handleReject(decidedBy: string) {
+    setIsSubmittingAction(true);
+    setActionError(null);
+    const result = await rejectLiveIncident(incidentId, decidedBy);
+    setIsSubmittingAction(false);
+    if (!result.ok) setActionError(result.message);
+  }
+
   if (!incident && loadStatus === "loading") {
-    return <LoadingState label="Loading incident from ai-dataops-assistant…" className="py-24" />;
+    return <LoadingState label="Loading incident…" className="py-24" />;
   }
 
   if (!incident) {
@@ -112,11 +139,25 @@ export default function IncidentDetailPage() {
 
         {isDqBreachUndecided && <DataQualityDecisionPanel incident={incident} />}
 
+        {USE_LIVE_API && incident.status === "WAITING_APPROVAL" && (
+          <Card>
+            <CardBody>
+              <HumanDecisionPanel
+                incident={incident}
+                onApprove={handleApprove}
+                onReject={(decidedBy) => handleReject(decidedBy)}
+                isSubmitting={isSubmittingAction}
+                actionError={actionError}
+              />
+            </CardBody>
+          </Card>
+        )}
+
         {USE_LIVE_API && rawInvestigation && (
           <Card>
-            <CardHeader title="AI Investigation (raw agent output)" icon={<BrainCircuit className="size-4" />} description="Unedited output from the ai-dataops-assistant investigation agent." />
+            <CardHeader title="AI Investigation" icon={<BrainCircuit className="size-4" />} description="Automated investigation and root-cause analysis for this incident." />
             <CardBody>
-              <pre className="max-h-96 overflow-auto whitespace-pre-wrap rounded-lg border border-border bg-surface-subtle p-3 text-xs leading-relaxed text-text-secondary">{rawInvestigation}</pre>
+              <StructuredAgentOutput raw={rawInvestigation} />
             </CardBody>
           </Card>
         )}
@@ -157,9 +198,9 @@ export default function IncidentDetailPage() {
 
         {notification && <NotificationLinkCard notification={notification} />}
 
-        {incident.regressionTest && <RegressionTestCard test={incident.regressionTest} />}
-
         <AuditTimeline events={incident.audit} />
+
+        {incident.regressionTest && <RegressionTestCard test={incident.regressionTest} />}
       </div>
     </div>
   );

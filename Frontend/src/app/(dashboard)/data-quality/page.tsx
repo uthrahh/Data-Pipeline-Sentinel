@@ -22,7 +22,7 @@ export default function DataQualityPage() {
     <div className="flex flex-col">
       <PageHeader
         title="Data Quality Check-up"
-        description="Every table in ai_dataops_poc.sap_demo — row counts, last load, and null-value DQ checks."
+        description="Row counts, last load, and null-value checks across every monitored table."
         breadcrumbs={[{ label: "Overview", href: "/overview" }, { label: "Data Quality" }]}
       />
 

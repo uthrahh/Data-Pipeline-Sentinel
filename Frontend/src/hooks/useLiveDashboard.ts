@@ -17,7 +17,7 @@ export function useLiveDashboard() {
         if (!cancelled) setData(d);
       })
       .catch(() => {
-        if (!cancelled) setError("Unable to load live dashboard data from ai-dataops-assistant.");
+        if (!cancelled) setError("Unable to load dashboard data.");
       })
       .finally(() => {
         if (!cancelled) setIsLoading(false);

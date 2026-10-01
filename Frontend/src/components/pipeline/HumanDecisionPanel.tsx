@@ -82,7 +82,7 @@ export function HumanDecisionPanel({ incident, onApprove, onReject, isSubmitting
               </div>
               <div className="flex shrink-0 flex-col items-end gap-1.5">
                 <StatusBadge style={RISK_STYLES[recommendation.risk]} />
-                <span className="text-[11px] text-text-tertiary">{recommendation.confidencePct}% confidence</span>
+                {recommendation.confidencePct > 0 && <span className="text-[11px] text-text-tertiary">{recommendation.confidencePct}% confidence</span>}
               </div>
             </div>
           ) : suggestedRemediation ? (

@@ -1,6 +1,8 @@
 import { incidentService } from "./incidentService";
 import { pipelineService } from "./pipelineService";
 import { sapDataService } from "./sapDataService";
+import { sendChatMessage } from "./liveApiService";
+import { USE_LIVE_API } from "@/lib/liveMode";
 import type { ChatMessage, ChatQueryResult, ChatResultCard, ChatToolCall } from "@/types";
 import { formatDuration } from "@/lib/utils";
 import { COUNTRIES, PIPELINES } from "@/config/sapPipelineConfig";
@@ -318,4 +320,37 @@ class MockChatService implements ChatService {
   }
 }
 
-export const chatService: ChatService = new MockChatService();
+function id2(): string {
+  return Math.random().toString(36).slice(2, 10);
+}
+
+/**
+ * Genie, wired to the real ai-dataops-assistant chat endpoint — a LangGraph
+ * supervisor that routes each message to a Genie / investigation / SLA / DQ /
+ * action sub-agent and returns its plain-text answer. No tool calls or result
+ * cards are fabricated here — the real API returns a single text reply.
+ */
+class ApiChatService implements ChatService {
+  async sendMessage(content: string): Promise<{ toolCalls: ChatToolCall[]; reply: ChatMessage }> {
+    const toolCalls: ChatToolCall[] = [{ label: "Asking Genie", status: "done" }];
+    try {
+      const message = await sendChatMessage(content);
+      return {
+        toolCalls,
+        reply: { id: id2(), role: "assistant", content: message, timestamp: new Date().toISOString() },
+      };
+    } catch {
+      return {
+        toolCalls,
+        reply: {
+          id: id2(),
+          role: "assistant",
+          content: "Genie couldn't process that request. Please try again.",
+          timestamp: new Date().toISOString(),
+        },
+      };
+    }
+  }
+}
+
+export const chatService: ChatService = USE_LIVE_API ? new ApiChatService() : new MockChatService();

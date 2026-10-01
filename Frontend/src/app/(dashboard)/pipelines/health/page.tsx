@@ -11,10 +11,11 @@ import { LoadingState } from "@/components/common/LoadingState";
 import { useOverviewSettings } from "@/lib/overviewSettings";
 import { buildPipelineSummaries } from "@/data/mock/pipelineSummaries";
 import { USE_LIVE_API } from "@/lib/liveMode";
-import { fetchPipelineOperations } from "@/services/liveApiService";
-import { PIPELINE_STATUS_STYLES } from "@/lib/constants";
+import { fetchIncidentHistory, fetchPipelineOperations } from "@/services/liveApiService";
+import { PIPELINE_STATUS_STYLES, CHECK_STATUS_STYLES } from "@/lib/constants";
+import { normalizeCheckStatus, normalizePipelineStatus } from "@/lib/liveStatus";
 import { cn, formatDateTime } from "@/lib/utils";
-import type { LivePipelineOperation } from "@/types";
+import type { LiveIncidentRow, LivePipelineOperation } from "@/types";
 
 function healthColor(score: number): string {
   if (score >= 80) return "text-success-600";
@@ -22,18 +23,65 @@ function healthColor(score: number): string {
   return "text-danger-600";
 }
 
+interface ExecutionRow {
+  key: string;
+  pipeline: string;
+  runId: string | null;
+  startTime: string | null;
+  status: string;
+  dqStatus: string | null;
+  slaStatus: string | null;
+  incidentId: string | null;
+}
+
+/** Combines the trailing-24h pipeline-operations feed with incident history (unbounded by time) so a run from before that window still shows up if it has a recorded incident — the most complete "latest executions" view the real API can support without a dedicated unwindowed runs endpoint. */
+function mergeExecutions(ops: LivePipelineOperation[], history: LiveIncidentRow[]): ExecutionRow[] {
+  const byRunId = new Map<string, ExecutionRow>();
+
+  for (const op of ops) {
+    const key = op.run_id ?? `${op.pipeline}-${op.start_time}`;
+    byRunId.set(key, {
+      key,
+      pipeline: op.pipeline,
+      runId: op.run_id,
+      startTime: op.start_time,
+      status: op.overall_status,
+      dqStatus: op.dq_status,
+      slaStatus: op.sla_status,
+      incidentId: op.incident_id !== "-" ? op.incident_id : null,
+    });
+  }
+
+  for (const row of history) {
+    const key = row.run_id ?? row.incident_id;
+    if (byRunId.has(key)) continue;
+    byRunId.set(key, {
+      key,
+      pipeline: row.pipeline_name,
+      runId: row.run_id,
+      startTime: row.detected_at,
+      status: row.status,
+      dqStatus: null,
+      slaStatus: null,
+      incidentId: row.incident_id,
+    });
+  }
+
+  return Array.from(byRunId.values()).sort((a, b) => (b.startTime ?? "").localeCompare(a.startTime ?? ""));
+}
+
 function LivePipelineHealthPage() {
-  const [ops, setOps] = useState<LivePipelineOperation[] | null>(null);
+  const [executions, setExecutions] = useState<ExecutionRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    fetchPipelineOperations()
-      .then((data) => {
-        if (!cancelled) setOps(data);
+    Promise.all([fetchPipelineOperations(), fetchIncidentHistory()])
+      .then(([ops, history]) => {
+        if (!cancelled) setExecutions(mergeExecutions(ops, history));
       })
       .catch(() => {
-        if (!cancelled) setError("Unable to load live pipeline operations.");
+        if (!cancelled) setError("Unable to load pipeline executions.");
       });
     return () => {
       cancelled = true;
@@ -43,21 +91,18 @@ function LivePipelineHealthPage() {
   return (
     <div className="flex flex-col">
       <PageHeader
-        title="Pipeline Health Check-up"
-        description="Real pipeline runs from ai-dataops-assistant's /api/pipeline-operations (trailing 24 hours)."
-        breadcrumbs={[{ label: "Overview", href: "/overview" }, { label: "Pipeline Health" }]}
+        title="Pipeline Executions"
+        description="Status, data quality, and SLA results for the latest pipeline runs."
+        breadcrumbs={[{ label: "Overview", href: "/overview" }, { label: "Pipeline Executions" }]}
       />
 
       <div className="p-4 sm:p-6">
         {error ? (
           <EmptyState title="Unable to load" description={error} />
-        ) : ops === null ? (
-          <LoadingState label="Loading pipeline operations…" className="py-16" />
-        ) : ops.length === 0 ? (
-          <EmptyState
-            title="No pipeline runs in the last 24 hours"
-            description="The real API's pipeline-operations endpoint only looks back 24 hours. Check the Incidents page for older activity."
-          />
+        ) : executions === null ? (
+          <LoadingState label="Loading pipeline executions…" className="py-16" />
+        ) : executions.length === 0 ? (
+          <EmptyState title="No pipeline executions yet" description="Pipeline runs will appear here as they happen." />
         ) : (
           <div className="overflow-x-auto rounded-xl border border-border bg-surface">
             <table className="w-full min-w-[900px] border-collapse text-left">
@@ -66,23 +111,27 @@ function LivePipelineHealthPage() {
                   <th className="whitespace-nowrap px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-text-tertiary">Pipeline</th>
                   <th className="whitespace-nowrap px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-text-tertiary">Status</th>
                   <th className="whitespace-nowrap px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-text-tertiary">Start Time</th>
-                  <th className="whitespace-nowrap px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-text-tertiary">DQ Status</th>
-                  <th className="whitespace-nowrap px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-text-tertiary">SLA Status</th>
+                  <th className="whitespace-nowrap px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-text-tertiary">Data Quality</th>
+                  <th className="whitespace-nowrap px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-text-tertiary">SLA</th>
                   <th className="whitespace-nowrap px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-text-tertiary">Incident</th>
                 </tr>
               </thead>
               <tbody>
-                {ops.map((op, i) => (
-                  <tr key={`${op.pipeline}-${op.run_id}-${i}`} className="border-b border-border text-xs last:border-0">
-                    <td className="px-4 py-3 font-medium text-text-primary">{op.pipeline}</td>
+                {executions.map((row) => (
+                  <tr key={row.key} className="border-b border-border text-xs last:border-0">
+                    <td className="px-4 py-3 font-medium text-text-primary">{row.pipeline}</td>
                     <td className="whitespace-nowrap px-4 py-3">
-                      <span className="inline-flex items-center gap-1.5 rounded-md bg-surface-muted px-2 py-0.5 font-medium text-text-secondary">{op.overall_status}</span>
+                      <StatusBadge style={PIPELINE_STATUS_STYLES[normalizePipelineStatus(row.status)]} />
                     </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-text-secondary">{formatDateTime(op.start_time)}</td>
-                    <td className="whitespace-nowrap px-4 py-3 text-text-secondary">{op.dq_status}</td>
-                    <td className="whitespace-nowrap px-4 py-3 text-text-secondary">{op.sla_status}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-text-secondary">{row.startTime ? formatDateTime(row.startTime) : "—"}</td>
+                    <td className="whitespace-nowrap px-4 py-3">
+                      {row.dqStatus ? <StatusBadge style={CHECK_STATUS_STYLES[normalizeCheckStatus(row.dqStatus)]} /> : <span className="text-text-tertiary">—</span>}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3">
+                      {row.slaStatus ? <StatusBadge style={CHECK_STATUS_STYLES[normalizeCheckStatus(row.slaStatus)]} /> : <span className="text-text-tertiary">—</span>}
+                    </td>
                     <td className="whitespace-nowrap px-4 py-3 font-mono text-[11px] text-accent-600">
-                      {op.incident_id !== "-" ? <Link href={`/incidents/${op.incident_id}`} className="hover:underline">{op.incident_id}</Link> : "—"}
+                      {row.incidentId ? <Link href={`/incidents/${row.incidentId}`} className="hover:underline">{row.incidentId}</Link> : "—"}
                     </td>
                   </tr>
                 ))}

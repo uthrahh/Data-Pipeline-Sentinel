@@ -34,7 +34,7 @@ export default function IncidentsPage() {
         title="Incidents"
         description={
           USE_LIVE_API
-            ? "Real incidents fetched from the ai-dataops-assistant API — detection through resolution."
+            ? "Every pipeline incident, from detection through resolution."
             : "Every pipeline failure, from detection through resolution — all 6 failure types."
         }
       />

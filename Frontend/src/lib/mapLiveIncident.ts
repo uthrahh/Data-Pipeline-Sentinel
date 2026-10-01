@@ -8,9 +8,12 @@ import type {
   LiveIncidentDetail,
   LiveIncidentRow,
   LiveSlaCheck,
+  RegressionTestCase,
   Severity,
   SLAResult,
 } from "@/types";
+import { FAILURE_TYPE_STYLES } from "@/lib/constants";
+import { summarizeAgentOutput } from "@/lib/parseAgentOutput";
 
 /**
  * Maps the real ai-dataops-assistant API's row shapes onto this app's own
@@ -106,6 +109,43 @@ export function mapSla(sla: LiveSlaCheck[] | undefined): SLAResult | null {
   };
 }
 
+const GUARDRAIL_DECISION_TEXT: Record<string, string> = {
+  AUTO_REMEDIATION: "Guardrail permitted automatic remediation — no human approval was required.",
+  APPROVAL_REQUIRED: "Guardrail required human approval before remediation could run.",
+  NO_GUARDRAIL: "No active guardrail exists for this issue type and action — remediation was blocked.",
+  REJECTED: "The remediation guardrail check rejected this action.",
+};
+
+/**
+ * A CI/CD-style regression-test record built entirely from this incident's
+ * own real fields (issue_type, criticality, guardrail_id/decision,
+ * recommended_action, status, final_message) — not a predicted or invented
+ * "expected" value. It documents what this specific run was classified as,
+ * which guardrail fired and what it decided, and how it was ultimately
+ * resolved, in the same shape the mock-mode regression suite uses.
+ */
+function buildLiveRegressionTest(row: LiveIncidentRow, failureType: FailureType): RegressionTestCase {
+  const classification = row.issue_type ?? FAILURE_TYPE_STYLES[failureType].label;
+  const decisionText = row.guardrail_decision ? GUARDRAIL_DECISION_TEXT[row.guardrail_decision.toUpperCase()] : null;
+
+  const workflowSteps = ["Detected"];
+  if (row.guardrail_id) workflowSteps.push(`Guardrail ${row.guardrail_id} evaluated`);
+  if (row.approval_status) workflowSteps.push(`Approval: ${row.approval_status.replaceAll("_", " ").toLowerCase()}`);
+  if (row.remediation_status) workflowSteps.push(`Remediation: ${row.remediation_status.replaceAll("_", " ").toLowerCase()}`);
+  if (row.validation_status) workflowSteps.push(`Validation: ${row.validation_status.replaceAll("_", " ").toLowerCase()}`);
+
+  return {
+    testId: `REG-${row.incident_id}`,
+    scenario: `${classification} on ${row.pipeline_name}${row.error_message ? ` — ${row.error_message}` : ""}`,
+    expectedBehavior: decisionText ?? "No guardrail decision has been recorded for this incident yet.",
+    expectedClassification: classification,
+    expectedWorkflow: workflowSteps.join(" → "),
+    expectedRemediation: row.recommended_action ?? "No action recommended.",
+    expectedFinalState: summarizeAgentOutput(row.final_message) ?? row.status,
+    addedToCiCdAt: row.last_updated,
+  };
+}
+
 function buildAudit(row: LiveIncidentRow): AuditEvent[] {
   const events: AuditEvent[] = [
     { id: `${row.incident_id}-detected`, timestamp: row.detected_at, label: "Failure detected", actor: "system", detail: row.error_message },
@@ -119,7 +159,13 @@ function buildAudit(row: LiveIncidentRow): AuditEvent[] {
       detail: row.approved_by ? `By ${row.approved_by}` : null,
     });
   }
-  events.push({ id: `${row.incident_id}-updated`, timestamp: row.last_updated, label: "Last updated", actor: "system", detail: row.final_message });
+  events.push({
+    id: `${row.incident_id}-updated`,
+    timestamp: row.last_updated,
+    label: "Last updated",
+    actor: "system",
+    detail: summarizeAgentOutput(row.final_message) ?? row.final_message,
+  });
   return events;
 }
 
@@ -160,7 +206,7 @@ export function mapLiveIncidentToIncident(row: LiveIncidentRow, checks?: { dq: L
     remediation: null,
     postValidation: null,
     audit: buildAudit(row),
-    regressionTest: null,
+    regressionTest: buildLiveRegressionTest(row, failureType),
     notificationId: null,
     executionType: (row.execution_type as "JOB" | "PIPELINE" | null) ?? "JOB",
     guardrailId: row.guardrail_id,

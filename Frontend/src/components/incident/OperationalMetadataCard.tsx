@@ -2,6 +2,8 @@ import { ShieldCheck } from "lucide-react";
 import type { Incident } from "@/types";
 import { Card, CardBody, CardHeader } from "@/components/common/Card";
 import { approvalStatusLabel, remediationStatusLabel, validationStatusLabel } from "@/lib/operationalStatus";
+import { StructuredAgentOutput } from "@/components/pipeline/StructuredAgentOutput";
+import { USE_LIVE_API } from "@/lib/liveMode";
 
 function Field({ label, value }: { label: string; value: React.ReactNode }) {
   return (
@@ -37,8 +39,8 @@ export function OperationalMetadataCard({ incident }: { incident: Incident }) {
         <Field label="Validation Status" value={validationStatusLabel(incident)} />
         {incident.finalMessage && (
           <div className="col-span-full border-t border-border pt-3">
-            <p className="text-[11px] font-medium uppercase tracking-wide text-text-tertiary">Final Message</p>
-            <p className="mt-1 text-sm text-text-secondary">{incident.finalMessage}</p>
+            <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-text-tertiary">Final Message</p>
+            {USE_LIVE_API ? <StructuredAgentOutput raw={incident.finalMessage} /> : <p className="text-sm text-text-secondary">{incident.finalMessage}</p>}
           </div>
         )}
       </CardBody>

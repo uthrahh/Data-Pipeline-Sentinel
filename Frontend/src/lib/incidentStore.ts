@@ -3,7 +3,14 @@
 import { useEffect, useSyncExternalStore } from "react";
 import { MOCK_INCIDENTS } from "@/data/mock/incidents";
 import { USE_LIVE_API } from "@/lib/liveMode";
-import { fetchActiveIncidents, fetchIncidentChecks, fetchIncidentDetail, fetchIncidentHistory } from "@/services/liveApiService";
+import {
+  approveIncident,
+  fetchActiveIncidents,
+  fetchIncidentChecks,
+  fetchIncidentDetail,
+  fetchIncidentHistory,
+  rejectIncident,
+} from "@/services/liveApiService";
 import { mapLiveIncidentDetailToIncident, mapLiveIncidentToIncident } from "@/lib/mapLiveIncident";
 import type { Incident } from "@/types";
 
@@ -126,17 +133,55 @@ export async function initLiveIncidents(): Promise<void> {
   emit();
 }
 
+/**
+ * Fetches the full detail (investigation text, guardrail/status fields) +
+ * DQ/SLA checks and fully replaces the store entry with a fresh mapping —
+ * used both for the initial per-incident hydration and after an
+ * approve/reject action, so the UI always reflects the real current state.
+ */
+export async function refreshLiveIncident(incidentId: string): Promise<Incident | null> {
+  const [detail, checks] = await Promise.all([fetchIncidentDetail(incidentId), fetchIncidentChecks(incidentId)]);
+  if (!detail) return null;
+  const incident = mapLiveIncidentDetailToIncident(detail, checks);
+  store.set(incidentId, incident);
+  emit();
+  return incident;
+}
+
 /** On-demand, per-incident: fetches the full detail (investigation text) + DQ/SLA checks and merges them into the store entry. */
 export async function hydrateIncidentChecks(incidentId: string): Promise<void> {
-  const current = store.get(incidentId);
-  if (!current) return;
+  if (!store.get(incidentId)) return;
   try {
-    const [detail, checks] = await Promise.all([fetchIncidentDetail(incidentId), fetchIncidentChecks(incidentId)]);
-    const enriched = detail ? mapLiveIncidentDetailToIncident(detail, checks) : { ...current, dq: current.dq, sla: current.sla };
-    store.set(incidentId, { ...current, dq: enriched.dq, sla: enriched.sla });
-    emit();
+    await refreshLiveIncident(incidentId);
   } catch {
     // best-effort — leave the list-level data as-is
+  }
+}
+
+export interface IncidentActionResult {
+  ok: boolean;
+  message: string;
+}
+
+/** Records human approval and immediately starts the guardrail-gated remediation (a real Databricks job rerun). */
+export async function approveLiveIncident(incidentId: string, approvedBy: string): Promise<IncidentActionResult> {
+  try {
+    const result = await approveIncident(incidentId, approvedBy);
+    await refreshLiveIncident(incidentId);
+    return { ok: result.success && result.result?.status !== "REJECTED", message: result.result?.message ?? "Incident approved." };
+  } catch (e) {
+    return { ok: false, message: e instanceof Error ? e.message : "Unable to approve this incident." };
+  }
+}
+
+/** Records rejection. No Databricks job or pipeline is executed. */
+export async function rejectLiveIncident(incidentId: string, rejectedBy: string): Promise<IncidentActionResult> {
+  try {
+    await rejectIncident(incidentId, rejectedBy);
+    await refreshLiveIncident(incidentId);
+    return { ok: true, message: "Incident rejected. No remediation was executed." };
+  } catch (e) {
+    return { ok: false, message: e instanceof Error ? e.message : "Unable to reject this incident." };
   }
 }
 

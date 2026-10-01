@@ -21,6 +21,7 @@ import { buildPipelineSummaries } from "@/data/mock/pipelineSummaries";
 import { computeOverviewKpis } from "@/lib/overviewMetrics";
 import { computeLiveOverviewKpis } from "@/lib/liveOverviewMetrics";
 import { PIPELINE_STATUS_STYLES } from "@/lib/constants";
+import { normalizePipelineStatus } from "@/lib/liveStatus";
 import { formatDateTime, formatDuration, formatNumber, formatPercent } from "@/lib/utils";
 
 const ATTENTION_STATUSES = new Set(["OPEN", "INVESTIGATING", "WAITING_APPROVAL", "REMEDIATION_FAILED", "VALIDATION_FAILED"]);
@@ -81,9 +82,9 @@ function OverviewBoxes({ optimizationText }: { optimizationText: string }) {
       </Card>
 
       <Card>
-        <CardHeader title="Data Quality Check-up" description="Row counts, load freshness, and DQ pass/fail for every table in ai_dataops_poc.sap_demo." icon={<Database className="size-4" />} />
+        <CardHeader title="Data Quality Check-up" description="Row counts, load freshness, and pass/fail checks across every monitored table." icon={<Database className="size-4" />} />
         <div className="flex items-center justify-between gap-4 px-5 py-4">
-          <p className="text-sm text-text-secondary">7 tables monitored in the sap_demo schema.</p>
+          <p className="text-sm text-text-secondary">7 tables monitored.</p>
           <Link href="/data-quality" className="inline-flex h-9 shrink-0 items-center justify-center rounded-lg bg-accent-500 px-4 text-sm font-medium text-white shadow-xs transition-colors hover:bg-accent-600">
             Check Data Quality
           </Link>
@@ -105,12 +106,12 @@ function LiveOverview() {
     <div className="flex flex-col">
       <PageHeader
         title="Pipeline Overview"
-        description="Real data fetched from the ai-dataops-assistant API (ai_dataops_poc.dataops.*) — not hardcoded."
+        description="Health of your SAP pipelines, incidents, and data quality — at a glance."
       />
 
       <div className="flex flex-col gap-5 p-4 sm:p-6">
         {error ? (
-          <EmptyState title="Unable to load live data" description={error} />
+          <EmptyState title="Unable to load pipeline data" description={error} />
         ) : isLoading || !kpis ? (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
             {Array.from({ length: 5 }).map((_, i) => (
@@ -119,19 +120,19 @@ function LiveOverview() {
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-            <KpiCard label="Pipelines (24h)" value={formatNumber(kpis.totalPipelines)} supportingText="distinct pipelines run" icon={Activity} accent="accent" />
-            <KpiCard label="Failed Pipelines" value={formatNumber(kpis.failedPipelines)} deltaIsGood={false} supportingText="last 24 hours" icon={AlertOctagon} accent="danger" />
-            <KpiCard label="Pipeline Success Rate" value={kpis.totalRuns > 0 ? formatPercent(kpis.successRatePct) : "—"} supportingText={`${kpis.totalRuns} runs, last 24h`} icon={CheckCircle2} accent="success" />
-            <KpiCard label="Max Pipeline Run Duration" value={formatDuration(kpis.maxDurationMinutes)} supportingText="last 24 hours" icon={Timer} accent="neutral" />
-            <KpiCard label="Active Incidents" value={formatNumber(kpis.activeIncidents)} supportingText={`${kpis.historyIncidents} in history`} icon={Gauge} accent="neutral" />
+            <KpiCard label="Pipelines Monitored" value={formatNumber(kpis.totalPipelines)} supportingText="distinct pipelines running" icon={Activity} accent="accent" />
+            <KpiCard label="Failed Pipelines" value={formatNumber(kpis.failedPipelines)} deltaIsGood={false} supportingText="need attention" icon={AlertOctagon} accent="danger" />
+            <KpiCard label="Pipeline Success Rate" value={kpis.totalRuns > 0 ? formatPercent(kpis.successRatePct) : "—"} supportingText={`${kpis.totalRuns} runs tracked`} icon={CheckCircle2} accent="success" />
+            <KpiCard label="Max Pipeline Run Duration" value={formatDuration(kpis.maxDurationMinutes)} supportingText="longest run time" icon={Timer} accent="neutral" />
+            <KpiCard label="Active Incidents" value={formatNumber(kpis.activeIncidents)} supportingText={`${kpis.historyIncidents} resolved to date`} icon={Gauge} accent="neutral" />
           </div>
         )}
 
-        <OverviewBoxes optimizationText="Real per-run DQ/SLA results are shown on each incident's detail page." />
+        <OverviewBoxes optimizationText="Per-run data quality and SLA results are shown on each incident's detail page." />
 
         <IncidentQueueCard
           title="Incidents Needing Attention"
-          description="Real incidents fetched from ai-dataops-assistant, currently open or pending."
+          description="Open investigations, pending approvals, and failed remediations."
           incidents={attentionIncidents}
           emptyTitle="No open incidents"
           emptyDescription="Nothing is currently waiting on approval or mid-remediation."
@@ -139,9 +140,9 @@ function LiveOverview() {
         />
 
         <Card>
-          <CardHeader title="Recent Pipeline Activity" description="From /api/pipeline-operations — real runs in the last 24 hours." />
+          <CardHeader title="Recent Pipeline Activity" description="The most recent pipeline runs." />
           {recentOps.length === 0 ? (
-            <EmptyState title="No pipeline runs in the last 24 hours" description="ai-dataops-assistant's pipeline-operations endpoint only looks back 24h — check Incidents for older activity." className="py-8" />
+            <EmptyState title="No recent pipeline activity" description="Check Incidents for the full execution history." className="py-8" />
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[700px] border-collapse text-left text-xs">
@@ -158,7 +159,7 @@ function LiveOverview() {
                     <tr key={`${op.pipeline}-${op.run_id}`} className="border-b border-border last:border-0">
                       <td className="px-4 py-3 font-medium text-text-primary">{op.pipeline}</td>
                       <td className="px-4 py-3">
-                        <StatusBadge style={PIPELINE_STATUS_STYLES[normalizeStatus(op.overall_status)]} />
+                        <StatusBadge style={PIPELINE_STATUS_STYLES[normalizePipelineStatus(op.overall_status)]} />
                       </td>
                       <td className="whitespace-nowrap px-4 py-3 text-text-secondary">{formatDateTime(op.start_time)}</td>
                       <td className="whitespace-nowrap px-4 py-3 font-mono text-[11px] text-text-tertiary">{op.run_id}</td>
@@ -172,16 +173,6 @@ function LiveOverview() {
       </div>
     </div>
   );
-}
-
-function normalizeStatus(status: string): keyof typeof PIPELINE_STATUS_STYLES {
-  const s = status.toUpperCase();
-  if (s === "SUCCESS") return "SUCCESS";
-  if (s === "RUNNING") return "RUNNING";
-  if (s.includes("TIMEOUT") || s.includes("TIMED_OUT")) return "TIMED_OUT";
-  if (s === "FAILED" || s.includes("ERROR") || s === "ACTION_REQUIRED" || s === "REMEDIATION_FAILED") return "FAILED";
-  if (s === "APPROVED" || s === "REMEDIATING" || s === "RESOLVED") return "PARTIAL";
-  return "UNKNOWN";
 }
 
 export default function OverviewPage() {
