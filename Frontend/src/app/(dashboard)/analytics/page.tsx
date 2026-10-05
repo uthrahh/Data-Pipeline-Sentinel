@@ -1,95 +1,92 @@
 "use client";
 
 import { useMemo } from "react";
-import { usePipelines } from "@/hooks/usePipelines";
+import { BarChart3, CalendarDays, ListChecks } from "lucide-react";
 import { PageHeader } from "@/components/common/PageHeader";
 import { Card, CardBody, CardHeader } from "@/components/common/Card";
-import { LoadingState } from "@/components/common/LoadingState";
 import { ExecutionTrendChart } from "@/components/analytics/ExecutionTrendChart";
 import { HealthCalendar, type DayHealth } from "@/components/analytics/HealthCalendar";
-import { BarChart3, CalendarDays } from "lucide-react";
-import { getPipeline } from "@/config/sapPipelineConfig";
-import { USE_LIVE_API } from "@/lib/liveMode";
+import { DAYS, PIPELINES, WORKSPACE_BY_ID, inWorkspace } from "@/ops/catalog";
+import { FAILURE_BY_KEY, FAILURE_TYPES } from "@/ops/failureTypes";
+import { useOps } from "@/ops/store";
 
 export default function AnalyticsPage() {
-  const { data, isLoading } = usePipelines({ pageSize: 200, sortKey: "startTime", sortDirection: "asc" });
+  const { runs, incidents, workspace } = useOps();
 
-  const trend = useMemo(() => {
-    const byDate = new Map<string, { success: number; failed: number }>();
-    for (const e of data.items) {
-      const date = e.startTime.slice(0, 10);
-      const bucket = byDate.get(date) ?? { success: 0, failed: 0 };
-      if (e.status === "SUCCESS") bucket.success += 1;
-      else if (e.status === "FAILED" || e.status === "TIMED_OUT") bucket.failed += 1;
-      byDate.set(date, bucket);
-    }
-    return Array.from(byDate.entries())
-      .sort(([a], [b]) => (a < b ? -1 : 1))
-      .map(([date, counts]) => ({
-        date: new Date(date).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" }),
-        ...counts,
-      }));
-  }, [data.items]);
+  const scopedRuns = useMemo(() => runs.filter((r) => inWorkspace(r.pipelineId, workspace)), [runs, workspace]);
+  const scopedIncidents = useMemo(() => incidents.filter((i) => inWorkspace(i.pipelineId, workspace)), [incidents, workspace]);
 
-  const { pipelines, dates, statusOf, pipelineNames } = useMemo(() => {
-    const pipelineSet = new Set<string>();
-    const dateSet = new Set<string>();
+  const trend = useMemo(
+    () =>
+      DAYS.map((d) => {
+        const day = scopedRuns.filter((r) => r.date === d);
+        const failed = day.filter((r) => r.executionStatus !== "SUCCESS").length;
+        return {
+          date: new Date(`${d}T00:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" }),
+          success: day.length - failed,
+          failed,
+        };
+      }),
+    [scopedRuns],
+  );
+
+  const calendar = useMemo(() => {
     const map = new Map<string, DayHealth>();
-    const names = new Map<string, string>();
-
-    for (const e of data.items) {
-      const date = e.startTime.slice(0, 10);
-      pipelineSet.add(e.pipelineId);
-      dateSet.add(date);
-      names.set(e.pipelineId, e.pipelineName);
-      const key = `${e.pipelineId}__${date}`;
-      const existing = map.get(key);
-      const value: DayHealth =
-        e.status === "FAILED" || e.status === "TIMED_OUT" ? "failed" : e.status === "PARTIAL" ? "partial" : "success";
-      if (!existing || existing === "success") map.set(key, value);
-      else if (existing === "partial" && value === "failed") map.set(key, value);
+    for (const r of scopedRuns) {
+      const k = `${r.pipelineId}__${r.date}`;
+      const value: DayHealth = r.executionStatus !== "SUCCESS" ? "failed" : r.slaStatus === "CRITICAL" ? "partial" : "success";
+      const cur = map.get(k);
+      if (!cur || cur === "success" || (cur === "partial" && value === "failed")) map.set(k, value);
     }
+    return map;
+  }, [scopedRuns]);
 
-    return {
-      pipelines: Array.from(pipelineSet).sort(),
-      dates: Array.from(dateSet).sort(),
-      statusOf: (pipeline: string, date: string): DayHealth => map.get(`${pipeline}__${date}`) ?? "none",
-      pipelineNames: names,
-    };
-  }, [data.items]);
+  const pipelines = PIPELINES.filter((p) => inWorkspace(p.id, workspace));
+
+  const byType = useMemo(() => {
+    const counts = FAILURE_TYPES.map((f) => ({ key: f.key, label: f.label, count: scopedIncidents.filter((i) => i.failureKey === f.key).length }));
+    const max = Math.max(1, ...counts.map((c) => c.count));
+    return counts.sort((a, b) => b.count - a.count).map((c) => ({ ...c, pct: (c.count / max) * 100 }));
+  }, [scopedIncidents]);
 
   return (
     <div className="flex flex-col">
-      <PageHeader
-        title="Analytics"
-        description={
-          USE_LIVE_API
-            ? "Pipeline execution trends and health over the trailing week, from the connected Databricks workspace."
-            : "SAP pipeline execution trends and health over the trailing week."
-        }
-      />
+      <PageHeader title="Analytics" description={`${WORKSPACE_BY_ID[workspace].name} — pipeline outcomes, SLA health and failure types over the last 7 days.`} />
 
       <div className="flex flex-col gap-5 p-4 sm:p-6">
         <Card>
-          <CardHeader title="Execution Volume" description="Successful vs. failed executions per day" icon={<BarChart3 className="size-4" />} />
+          <CardHeader title="Execution volume" description="Successful vs. failed runs per day" icon={<BarChart3 className="size-4" />} />
           <CardBody>
-            {isLoading ? <LoadingState className="py-12" /> : <ExecutionTrendChart data={trend} />}
+            <ExecutionTrendChart data={trend} />
           </CardBody>
         </Card>
 
         <Card>
-          <CardHeader title="Pipeline Health Calendar" description="Daily outcome per pipeline, trailing week" icon={<CalendarDays className="size-4" />} />
+          <CardHeader title="Failure types" description="Incidents by failure type, last 7 days" icon={<ListChecks className="size-4" />} />
+          <CardBody>
+            <ul className="space-y-2.5">
+              {byType.map((t) => (
+                <li key={t.key} className="grid grid-cols-[11rem_1fr_2rem] items-center gap-3 text-xs">
+                  <span className="truncate text-text-secondary">{FAILURE_BY_KEY[t.key].label}</span>
+                  <span className="h-2 overflow-hidden rounded-full bg-surface-muted">
+                    <span className="block h-full rounded-full bg-accent-500" style={{ width: `${t.pct}%` }} />
+                  </span>
+                  <span className="text-right font-medium text-text-primary">{t.count}</span>
+                </li>
+              ))}
+            </ul>
+          </CardBody>
+        </Card>
+
+        <Card>
+          <CardHeader title="Pipeline health calendar" description="Daily outcome per pipeline — amber means the run succeeded but breached the 15 min SLA" icon={<CalendarDays className="size-4" />} />
           <CardBody className="px-0 py-4">
-            {isLoading ? (
-              <LoadingState className="py-12" />
-            ) : (
-              <HealthCalendar
-                pipelines={pipelines}
-                dates={dates}
-                cellStatus={statusOf}
-                pipelineLabel={(id) => pipelineNames.get(id) ?? getPipeline(id)?.label ?? id}
-              />
-            )}
+            <HealthCalendar
+              pipelines={pipelines.map((p) => p.id)}
+              dates={[...DAYS]}
+              cellStatus={(p, d) => calendar.get(`${p}__${d}`) ?? "none"}
+              pipelineLabel={(id) => pipelines.find((p) => p.id === id)?.name ?? id}
+            />
           </CardBody>
         </Card>
       </div>

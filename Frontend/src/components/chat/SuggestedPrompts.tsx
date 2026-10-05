@@ -1,4 +1,4 @@
-import { SUGGESTED_PROMPTS } from "@/data/mock/chat";
+import { SUGGESTED_PROMPTS } from "@/data/chatPrompts";
 
 export function SuggestedPrompts({ onSelect }: { onSelect: (prompt: string) => void }) {
   return (

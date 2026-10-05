@@ -1,63 +1,59 @@
-# Sentinel: Pipeline Health, Data Quality & Incident Console (static demo)
+# Sentinel: SAP Pipeline Operations Console (static demo)
 
-**A fully static UI for SAP-sourced Databricks pipelines — 30 pipelines across 10 countries, pipeline health scoring, real `sap_demo`-grounded data quality checks, and a 6-failure-type incident engine with a full notification/regression-test workflow. No backend, no live data — everything is deterministic fixture data, deployed on Vercel.**
+**A demo-ready console for SAP-sourced Databricks pipelines: 15 pipelines across 5 countries, 40 runs a day, an AI-driven incident workflow for 14 failure types, escalation emails, and data validation checks. Everything is static demo data except Genie, the chat assistant, which is live.**
 
 ![Next.js](https://img.shields.io/badge/Next.js_16-000000?style=flat-square&logo=nextdotjs&logoColor=white)
 ![React](https://img.shields.io/badge/React_19-20232A?style=flat-square&logo=react&logoColor=61DAFB)
 ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white)
-![Vercel](https://img.shields.io/badge/Vercel-000000?style=flat-square&logo=vercel&logoColor=white)
-![Status](https://img.shields.io/badge/status-static_%E2%80%94_no_backend-2ea44f?style=flat-square)
+![Databricks](https://img.shields.io/badge/Databricks_Apps-FF3621?style=flat-square&logo=databricks&logoColor=white)
 
-> **This is the `static` branch.** It is deliberately disconnected from any
-> backend — `USE_LIVE_API` is hardcoded `false` in
-> [`Frontend/src/lib/liveMode.ts`](Frontend/src/lib/liveMode.ts), so no env
-> var can accidentally point it at a live system. The live, Databricks-backed
-> versions of this app live on the `n-live` and `h-live` branches.
+> **This is the `static` branch (the repo's default).** It is hosted as a Databricks App only. The live, Databricks-backed variants live on `n-live` and `h-live`.
 
----
-
-## What it does
+## What's in it
 
 | Page | What it shows |
 |---|---|
-| **Overview** | KPIs across 30 pipelines (10 countries × 3 SAP pipeline categories), configurable settings, and two drill-down boxes: Pipeline Health Check-up and Data Quality Check-up. |
-| **Pipeline Health** | Health score and optimization status per pipeline, based on runtime vs. configured average/max baselines. |
-| **Data Quality Check-up** | Row counts, load freshness, and DQ pass/fail for the 7 real tables in `ai_dataops_poc.sap_demo`, snapshotted as fixtures. |
-| **Incidents** (list + detail) | 10 hand-authored incidents covering all 6 failure types (Transient Job Failure, Known Task Restart, Schema Change, Unknown Error, Data Quality Breach, Permission Issue), each with its own status-machine workflow, investigation/DQ/SLA panels, regression test card, and operational metadata. |
-| **Notifications** | Simulated send/reject flow — email recipient is derived from the pipeline's real assignee (no email is actually sent). |
+| **Overview** | Today's KPIs (runs, failures, success rate, max duration, active incidents), the 5 newest open incidents, and the 5 most recent runs. A **workspace switcher** (All Workspaces / Procurement DE / Sales DE) re-scopes every page. |
+| **Pipelines** | All 40 runs for any of the last 7 days (day tabs), as a 23-column table: run, incident, approval/remediation/validation state, SLA, guardrail and recommended action. Filter by status, failure type, or search. |
+| **Incidents** | Every incident (105 over 7 days, 24 active) plus the failure scenario / remediation playbook. Each incident opens an 8-step workflow: created → AI investigation → failure type → SLA → remediation → validation → notification → regression test, followed by the audit history. |
+| **Notifications** | Every email and escalation sent in the last 7 days (incident, subject, reason, person, failure type, pipeline); open one to see the full email and resolution. |
+| **Data Validation** | The 7 `ai_dataops_poc.sap_demo` tables, grouped as source and resulting tables. Expand a table to run each of the 10 data quality checks (or all at once). |
+| **Analytics** | Daily success/failure volume, failure types, and a pipeline health calendar — all computed from the same data. |
+| **Genie** (chat button) | Live — `POST /api/chat` on the Databricks-hosted assistant. |
 
-Every value is either hand-authored fixture data or a real snapshot pulled once from Unity Catalog and hardcoded (e.g. the 7 `sap_demo` table schemas). Nothing fetches anything at runtime.
+### How the incident workflow behaves
 
-## Quick start
+- **14 failure types**, each with its own recommendation and remediation (rerun, wait for source, quarantine bad data, refresh schema, grant access, increase compute/timeout, wait for dependency, priority rerun, fix configuration…). Today's 18 failed runs cover every type.
+- **Approve & remediate** starts the remediation (a pop-up confirms *the pipeline has been started in Databricks*), runs it, validates, and resolves the incident. **Reject** closes it without action.
+- **Repeated failure** and **Unknown** have no safe automation — the only path is **Send email** to the pipeline owner.
+- **Send email** is available on every incident. The email is generated from the incident (reason + the solution for that failure type) and appears under Notifications.
+- **SLA:** the average pipeline runtime is 15 minutes; a longer run is **Critical**, a shorter one **Safe**.
 
-```bash
-git clone https://github.com/uthrahh/Data-Pipeline-Sentinel.git
-cd Data-Pipeline-Sentinel/Frontend
-npm install
-npm run dev
-# open http://localhost:3000
-```
-
-## Deploying to Vercel
+## Run it
 
 ```bash
 cd Frontend
-vercel
+npm install
+npm run dev      # http://localhost:3000
 ```
 
-Set **Root Directory** to `Frontend` in the Vercel project settings (this repo is a monorepo with `Frontend/`/`Backend/` siblings) — `Frontend/vercel.json` pins the build/install/dev commands so Vercel doesn't have to auto-detect them. No environment variables are required; the app has nothing to connect to.
+Only Genie needs a backend. Locally, point it at any server that implements `POST /api/chat` (`{ "message": "…" }` → `{ "data": { "message": "…" } }`) via `Frontend/.env.local` (see `.env.local.example`). Without it, the rest of the app still works and Genie says it couldn't answer.
+
+## Hosting (Databricks Apps only)
+
+`Frontend/app.yaml` runs the app as a Databricks App. Genie reaches the assistant through the app's own server-side proxy (`src/app/api/proxy`), which authenticates as a service principal — the browser never holds a Databricks credential — and only forwards `POST /api/chat`. See [`Frontend/README.md`](Frontend/README.md) for the full deployment steps.
 
 ## Project structure
 
 ```
-Frontend/
-  src/app/           Next.js App Router pages: /overview, /pipelines/health,
-                      /incidents, /incidents/[incidentId], /data-quality, /notifications
-  src/data/mock/      All fixture data — pipelines, incidents, DQ tables, people/owners
-  src/lib/            liveMode.ts (hardcoded false here), overviewSettings, lifecycle,
-                       incidentStore/notificationStore (in-memory, mutable for demo interactivity)
-  src/config/         sapPipelineConfig.ts — 10 countries × 3 pipeline categories
-  src/types/          Domain model (Pipeline, Incident, DQ, SLA, Notification, Audit, RegressionTest)
+Frontend/src/
+  ops/         The static data model: pipelines, 14 failure types, runs, incidents,
+               notifications, validation checks, and the in-memory store (workspace,
+               approve/reject/email actions)
+  app/         Routes: /overview /pipelines /incidents /notifications /data-validation /analytics
+  components/  Layout (sidebar, workspace switcher), common UI, chat (Genie), incident modals
+  services/    chatService.ts — the one live call (Genie)
+Backend/       Legacy FastAPI service — not used by this branch
 ```
 
 ---

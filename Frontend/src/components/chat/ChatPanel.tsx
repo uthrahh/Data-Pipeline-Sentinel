@@ -57,9 +57,9 @@ export function ChatPanel({ onClose }: { onClose: () => void }) {
         {messages.length === 0 ? (
           <div className="flex h-full flex-col justify-between gap-6">
             <div className="space-y-1.5">
-              <p className="text-sm font-medium text-text-primary">Hi — I&apos;m Genie, your SAP pipeline assistant.</p>
+              <p className="text-sm font-medium text-text-primary">Hi — I&apos;m Genie, your data assistant.</p>
               <p className="text-xs leading-relaxed text-text-tertiary">
-                Ask me about material master, vendors, sales orders, Gold Integration, or pipeline failures, DQ/SLA, and remediation.
+                Ask me questions about your sales data — revenue, products, retailers, and countries — in plain English.
               </p>
             </div>
             <SuggestedPrompts onSelect={handleSend} />
@@ -81,7 +81,7 @@ export function ChatPanel({ onClose }: { onClose: () => void }) {
               }
             }}
             rows={1}
-            placeholder="Ask about a pipeline, incident, or SLA…"
+            placeholder="Ask Genie about your sales data…"
             className="max-h-24 flex-1 resize-none bg-transparent text-sm text-text-primary outline-none placeholder:text-text-tertiary"
           />
           <button

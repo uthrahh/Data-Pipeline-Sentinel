@@ -9,6 +9,7 @@ import {
   LayoutGrid,
   LineChart,
   Mail,
+  ShieldCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -17,6 +18,7 @@ const NAV_ITEMS = [
   { href: "/pipelines", label: "Pipelines", icon: Activity },
   { href: "/incidents", label: "Incidents", icon: AlertOctagon },
   { href: "/notifications", label: "Notifications", icon: Mail },
+  { href: "/data-validation", label: "Data Validation", icon: ShieldCheck },
   { href: "/analytics", label: "Analytics", icon: LineChart },
 ];
 

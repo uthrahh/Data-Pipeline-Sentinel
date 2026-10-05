@@ -41,7 +41,7 @@ export function ChatMessageBubble({ message }: { message: ChatMessage }) {
                 ))}
               </div>
             )}
-            <div className={cn("max-w-full rounded-2xl rounded-tl-sm bg-surface-muted px-3.5 py-2.5 text-sm text-text-primary")}>
+            <div className={cn("max-w-full rounded-2xl rounded-tl-sm bg-surface-muted px-3.5 py-2.5 text-sm text-text-primary whitespace-pre-wrap break-words")}>
               {message.content}
             </div>
             {message.queryResult && (

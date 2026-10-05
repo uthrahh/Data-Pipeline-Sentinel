@@ -1,76 +1,64 @@
-# Sentinel AI Pipeline — Frontend (static branch)
+# Sentinel AI Pipeline — Frontend (`static`)
 
-A fully static, no-backend build of the SAP pipeline observability and
-incident console. Every page renders from deterministic, hand-authored or
-once-snapshotted fixture data — there is no fetch, no API call, no
-environment-driven backend switch. This is the branch deployed to Vercel.
+Static demo of the SAP pipeline operations console, hosted as a **Databricks App**. All pages render deterministic demo data; **Genie** (the chat assistant) is the only live integration.
 
-## No live mode here, on purpose
+See the [root README](../README.md) for what each page does. This file covers the code layout and deployment.
 
-`src/lib/liveMode.ts` hardcodes `USE_LIVE_API = false` — not env-driven —
-specifically so this branch can never be accidentally pointed at a live
-backend via a misconfigured env var on Vercel:
+## Data model (`src/ops`)
 
-```ts
-export const USE_LIVE_API = false;
-```
+| File | Purpose |
+|---|---|
+| `catalog.ts` | 15 pipelines (3 families × 5 countries: CA, DE, GB, SG, US), owners, workspaces (All / Procurement DE / Sales DE), the 7-day window, the 15-minute SLA baseline |
+| `failureTypes.ts` | The 14 failure types: recommendation, remediation, root cause, investigation steps, remediation/validation steps, planned change (e.g. compute 2 → 4 workers), solution text, regression-test definition |
+| `data.ts` | Deterministic generator: 40 runs per day × 7 days, incidents for every failed run (18 today, covering all 14 types), 6 carried-over open incidents (so 24 active), and the last 7 days of sent emails |
+| `store.ts` | In-memory store (`useSyncExternalStore`): workspace selection, **approve & remediate** (starts a simulated Databricks run, validates, resolves), **reject**, **send email** |
+| `email.ts` | Builds each email from the incident — reason plus the solution for its failure type |
+| `validation.ts` | The 7 tables and the 10 data quality checks; running a check returns a random, threshold-consistent result |
 
-The live, Databricks-backed versions of this same UI (fetching from a real
-Databricks App) live on the `n-live` and `h-live` branches of this repo —
-see those branches' READMEs for how they wire up live data.
+Data is seeded with a fixed PRNG so server and client render identically (no hydration mismatches). "Today" is the last day in the window (2026-10-06).
 
-```bash
-npm install && npm run dev
-# open http://localhost:3000
-```
+## Genie (the live part)
 
-## What's in the fixtures
+`src/services/chatService.ts` POSTs `{ "message": … }` to `${NEXT_PUBLIC_API_URL}/api/chat` and renders `data.message`. Errors degrade to a friendly message.
 
-- **30 pipelines**: 10 countries (`src/config/sapPipelineConfig.ts`) × 3 SAP
-  pipeline categories (material master, procurement, sales & manufacturing).
-- **Data Quality**: 7 real table schemas pulled once from
-  `ai_dataops_poc.sap_demo` in Unity Catalog and hardcoded as fixtures
-  (`src/data/mock/dataQuality.ts`) — row counts, freshness, and DQ
-  pass/fail are real snapshots, not invented.
-- **Incidents**: 10 hand-authored incidents covering all 6 failure types
-  (Transient Job Failure, Known Task Restart, Schema Change, Unknown Error,
-  Data Quality Breach, Permission Issue), each modeling its own
-  status-machine workflow end to end — investigation, DQ/SLA checks,
-  regression test, notification, and audit trail
-  (`src/data/mock/incidents.ts`).
-- **People/owners**: 10 named people with emails
-  (`src/data/mock/people.ts`); every pipeline has a real
-  `ownerEmail`, and notification recipients are derived from whichever
-  pipeline/incident they're attached to, not hardcoded per-notification.
+- **Local:** `.env.local` → `NEXT_PUBLIC_API_URL=http://localhost:8000` (any server implementing that endpoint).
+- **Databricks App:** `NEXT_PUBLIC_API_URL=/api/proxy`. The proxy (`src/app/api/proxy/[...path]/route.ts`) exchanges a service-principal `client_id`/`client_secret` for a short-lived OAuth token server-side and forwards **only** `POST /api/chat` to `DATABRICKS_APP_URL` — the assistant's approve/reject/remediate endpoints are unreachable from this app.
 
-`src/lib/incidentStore.ts` / `src/lib/notificationStore.ts` keep this data
-in an in-memory, mutable store (via `useSyncExternalStore`) so the demo
-interactions — approving a DQ breach, sending/rejecting a notification —
-actually update the UI across pages, entirely client-side.
-
-## Architecture
-
-```
-src/
-  types/         Domain model (Pipeline, Incident, DQ, SLA, Notification, Audit, RegressionTest)
-  lib/           liveMode.ts (hardcoded false), overviewSettings, lifecycle (incident
-                 stepper), incidentStore/notificationStore, seededRandom (deterministic
-                 PRNG — avoids Next.js SSR/client hydration mismatches)
-  config/        sapPipelineConfig.ts — 10 countries × 3 pipeline categories
-  data/mock/     All fixture data — the only data source on this branch
-  components/    dashboard/ · pipeline/ · incident/ · layout/ · common/
-  app/           Next.js App Router pages: /overview, /pipelines/health,
-                 /incidents, /incidents/[incidentId], /data-quality, /notifications
-```
-
-## Deploying to Vercel
+## Deployment (Databricks Apps)
 
 ```bash
-cd Frontend
-vercel
+databricks apps create sentinel-pipeline-frontend -p sentinel-apps
+databricks apps deploy sentinel-pipeline-frontend -p sentinel-apps   # app configured with this repo's `static` branch as its git source
 ```
 
-Set **Root Directory** to `Frontend` in the Vercel project settings (this
-repo is a monorepo with `Frontend/`/`Backend/` siblings — `vercel.json` in
-this directory pins the build/install commands). No environment variables
-are required.
+`app.yaml` builds and starts the app on port 8000 and sets:
+
+```yaml
+env:
+  - name: "NEXT_PUBLIC_API_URL"
+    value: "/api/proxy"
+  - name: "DATABRICKS_HOST"
+    value: "https://dbc-fa603402-4338.cloud.databricks.com"
+  - name: "DATABRICKS_APP_URL"
+    value: "https://ai-dataops-assistant-7474652936146529.aws.databricksapps.com"
+  - name: "DATABRICKS_CLIENT_ID"
+    value: "<service principal application id>"
+  - name: "DATABRICKS_CLIENT_SECRET"
+    valueFrom: "backend-client-secret"
+```
+
+The service principal needs `CAN_USE` on the assistant app (grant it additively with `databricks apps update-permissions`, never `set-permissions`, so the app's existing ACL is preserved). A secret referenced with `valueFrom` must first be attached to the app as a **resource** through the API — a `resources:` block inside `app.yaml` is silently ignored:
+
+```bash
+databricks secrets create-scope sentinel-pipeline -p sentinel-apps
+databricks secrets put-secret sentinel-pipeline backend-client-secret --string-value '<secret>' -p sentinel-apps
+databricks apps update sentinel-pipeline-frontend --json \
+  '{"resources":[{"name":"backend-client-secret","secret":{"scope":"sentinel-pipeline","key":"backend-client-secret","permission":"READ"}}]}' \
+  -p sentinel-apps
+```
+
+## Checks
+
+```bash
+npx tsc --noEmit && npx eslint src && npm run build
+```

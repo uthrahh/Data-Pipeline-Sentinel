@@ -1,5 +1,5 @@
 import { Bot, History, User as UserIcon, Cog } from "lucide-react";
-import type { AuditEvent } from "@/types";
+import type { AuditEvent } from "@/ops/types";
 import { Card, CardBody, CardHeader } from "@/components/common/Card";
 import { cn, formatTime, formatDate } from "@/lib/utils";
 
