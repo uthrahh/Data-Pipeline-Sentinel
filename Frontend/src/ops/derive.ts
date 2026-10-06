@@ -9,6 +9,7 @@ export function isActive(i: Incident): boolean {
 
 export function approvalStatus(i: Incident | undefined): string {
   if (!i) return "-";
+  if (FAILURE_BY_KEY[i.failureKey].autoRun) return "NOT_REQUIRED";
   if (i.status === "WAITING_APPROVAL") return "PENDING";
   if (i.status === "ESCALATED") return "ESCALATED";
   if (i.status === "REJECTED") return "REJECTED";
@@ -38,7 +39,8 @@ export function overallStatus(run: PipelineRun, i: Incident | undefined): string
 
 export function guardrailDecision(i: Incident | undefined): string {
   if (!i) return "-";
-  return FAILURE_BY_KEY[i.failureKey].autoRemediable ? "APPROVAL_REQUIRED" : "ESCALATION_REQUIRED";
+  const def = FAILURE_BY_KEY[i.failureKey];
+  return def.autoRun ? "AUTO_REMEDIATION" : def.autoRemediable ? "APPROVAL_REQUIRED" : "ESCALATION_REQUIRED";
 }
 
 export function guardrailOf(i: Incident | undefined): string {

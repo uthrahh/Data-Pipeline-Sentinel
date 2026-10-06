@@ -51,12 +51,15 @@ const CARRY_OVER: Record<number, { key: FailureKey; status: IncidentStatus }[]> 
     { key: "PERMISSION_FAILURE", status: "WAITING_APPROVAL" },
     { key: "DATA_CORRUPTION", status: "WAITING_APPROVAL" },
     { key: "UNKNOWN", status: "ESCALATED" },
+    { key: "RESOURCE_EXHAUSTION", status: "WAITING_APPROVAL" },
   ],
   4: [
     { key: "REPEATED_FAILURE", status: "ESCALATED" },
     { key: "SCHEMA_MISMATCH", status: "WAITING_APPROVAL" },
+    { key: "DQ_FAILURE", status: "WAITING_APPROVAL" },
   ],
   3: [{ key: "UNKNOWN", status: "ESCALATED" }],
+  2: [{ key: "CONFIGURATION_FAILURE", status: "WAITING_APPROVAL" }],
 };
 
 const HEX = "0123456789ABCDEF";
@@ -94,7 +97,7 @@ function planFailures(dayIdx: number): Map<number, FailurePlanEntry> {
   if (DAYS[dayIdx] === TODAY) {
     SLOTS.forEach((slot, i) => {
       const key = TODAY_PLAN[`${slot.pipelineId}#${slot.k}`];
-      if (key) plan.set(i, { key, status: "WAITING_APPROVAL" });
+      if (key) plan.set(i, { key, status: FAILURE_BY_KEY[key].autoRun ? "RESOLVED" : "WAITING_APPROVAL" });
     });
     return plan;
   }
@@ -114,7 +117,8 @@ function planFailures(dayIdx: number): Map<number, FailurePlanEntry> {
     const key = typeCycle[cycle % typeCycle.length];
     cycle += 1;
     resolvedCount += 1;
-    plan.set(slotIdx, { key, status: resolvedCount % 9 === 4 ? "REJECTED" : "RESOLVED" });
+    const rejected = !FAILURE_BY_KEY[key].autoRun && resolvedCount % 9 === 4;
+    plan.set(slotIdx, { key, status: rejected ? "REJECTED" : "RESOLVED" });
   });
   return plan;
 }
@@ -146,7 +150,11 @@ function buildAudit(incident: Incident, status: IncidentStatus, rand: () => numb
     events.push(ev(5, 18 + seededInt(rand, 0, 12), "Remediation rejected", "human", `By ${incident.owner.name}`));
   } else if (status === "RESOLVED") {
     const started = 18 + seededInt(rand, 0, 12);
-    if (def.autoRemediable) {
+    if (def.autoRun) {
+      events.push(ev(4, 3, `Auto-remediation started: ${def.remediationLabel}`, "system", "Guardrail allows an automatic rerun — no approval required"));
+      events.push(ev(5, 4, "Pipeline started in Databricks", "system", `Remediation run ${incident.remediationRunId ?? ""}`.trim()));
+      events.push(ev(6, 16, "Validation passed — incident resolved automatically", "system", def.validation[0]));
+    } else if (def.autoRemediable) {
       events.push(ev(4, 3, "Waiting for human approval", "system", def.remediationLabel));
       events.push(ev(5, started, "Remediation approved", "human", `By ${incident.owner.name}`));
       events.push(ev(6, started + 1, `Remediation started: ${def.remediationLabel}`, "system", "Job run started in Databricks"));
@@ -230,7 +238,7 @@ function generate() {
         executionStatus: run.executionStatus,
         durationMinutes: duration,
         slaStatus: run.slaStatus,
-        approvedBy: planned.status === "RESOLVED" ? p.owner.name : null,
+        approvedBy: planned.status === "RESOLVED" ? (def.autoRun ? "auto-remediation" : p.owner.name) : null,
         approvedAt: null,
         rejectedBy: planned.status === "REJECTED" ? p.owner.name : null,
         remediationRunId: planned.status === "RESOLVED" && def.autoRemediable ? digits(rand, 15) : null,

@@ -18,13 +18,13 @@
 | **Incidents** | Every incident (105 over 7 days, 24 active) plus the failure scenario / remediation playbook. Each incident opens an 8-step workflow: created → AI investigation → failure type → SLA → remediation → validation → notification → regression test, followed by the audit history. |
 | **Notifications** | Every email and escalation sent in the last 7 days (incident, subject, reason, person, failure type, pipeline); open one to see the full email and resolution. |
 | **Data Validation** | The 7 `ai_dataops_poc.sap_demo` tables, grouped as source and resulting tables. Expand a table to run each of the 10 data quality checks (or all at once). |
-| **Analytics** | Daily success/failure volume, failure types, and a pipeline health calendar — all computed from the same data. |
 | **Genie** (chat button) | Live — `POST /api/chat` on the Databricks-hosted assistant. |
 
 ### How the incident workflow behaves
 
-- **14 failure types**, each with its own recommendation and remediation (rerun, wait for source, quarantine bad data, refresh schema, grant access, increase compute/timeout, wait for dependency, priority rerun, fix configuration…). Today's 18 failed runs cover every type.
-- **Approve & remediate** starts the remediation (a pop-up confirms *the pipeline has been started in Databricks*), runs it, validates, and resolves the incident. **Reject** closes it without action.
+- **14 failure types**, each with its own recommendation and remediation (rerun, wait for source, quarantine bad data, refresh schema, grant access, increase compute/timeout, wait for dependency, priority rerun, fix configuration…). Today's 18 failed runs cover every type (3 of them auto-resolved).
+- **Transient infrastructure** and **temporary execution** failures are safe to rerun, so Sentinel runs the remediation **automatically** and resolves the incident — no approval or remediate button; only **Send email** is offered, if the owner should be told.
+- **Approve & remediate** (all other recoverable types) starts the remediation (a pop-up confirms *the pipeline has been started in Databricks*), runs it, validates, and resolves the incident. **Reject** closes it without action.
 - **Repeated failure** and **Unknown** have no safe automation — the only path is **Send email** to the pipeline owner.
 - **Send email** is available on every incident. The email is generated from the incident (reason + the solution for that failure type) and appears under Notifications.
 - **SLA:** the average pipeline runtime is 15 minutes; a longer run is **Critical**, a shorter one **Safe**.
@@ -50,7 +50,7 @@ Frontend/src/
   ops/         The static data model: pipelines, 14 failure types, runs, incidents,
                notifications, validation checks, and the in-memory store (workspace,
                approve/reject/email actions)
-  app/         Routes: /overview /pipelines /incidents /notifications /data-validation /analytics
+  app/         Routes: /overview /pipelines /incidents /notifications /data-validation
   components/  Layout (sidebar, workspace switcher), common UI, chat (Genie), incident modals
   services/    chatService.ts — the one live call (Genie)
 Backend/       Legacy FastAPI service — not used by this branch

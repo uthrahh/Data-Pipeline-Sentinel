@@ -9,8 +9,8 @@ See the [root README](../README.md) for what each page does. This file covers th
 | File | Purpose |
 |---|---|
 | `catalog.ts` | 15 pipelines (3 families × 5 countries: CA, DE, GB, SG, US), owners, workspaces (All / Procurement DE / Sales DE), the 7-day window, the 15-minute SLA baseline |
-| `failureTypes.ts` | The 14 failure types: recommendation, remediation, root cause, investigation steps, remediation/validation steps, planned change (e.g. compute 2 → 4 workers), solution text, regression-test definition |
-| `data.ts` | Deterministic generator: 40 runs per day × 7 days, incidents for every failed run (18 today, covering all 14 types), 6 carried-over open incidents (so 24 active), and the last 7 days of sent emails |
+| `failureTypes.ts` | The 14 failure types (`autoRun: true` for transient/temporary — rerun automatically, no approval): recommendation, remediation, root cause, investigation steps, remediation/validation steps, planned change (e.g. compute 2 → 4 workers), solution text, regression-test definition |
+| `data.ts` | Deterministic generator: 40 runs per day × 7 days, incidents for every failed run (18 today, covering all 14 types), 9 carried-over open incidents (15 open today + 9 = 24 active; today's 3 transient/temporary failures auto-resolve), and the last 7 days of sent emails |
 | `store.ts` | In-memory store (`useSyncExternalStore`): workspace selection, **approve & remediate** (starts a simulated Databricks run, validates, resolves), **reject**, **send email** |
 | `email.ts` | Builds each email from the incident — reason plus the solution for its failure type |
 | `validation.ts` | The 7 tables and the 10 data quality checks; running a check returns a random, threshold-consistent result |

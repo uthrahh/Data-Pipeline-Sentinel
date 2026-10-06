@@ -238,8 +238,8 @@ export default function IncidentsPage() {
                     <td className="px-4 py-2.5 font-mono text-[11px] text-text-secondary">{f.recommendation}</td>
                     <td className="px-4 py-2.5 text-text-secondary">{f.remediationLabel}</td>
                     <td className="px-4 py-2.5">
-                      <span className={cn("rounded px-1.5 py-0.5 text-[10px] font-semibold", f.autoRemediable ? "bg-info-50 text-info-700" : "bg-warning-50 text-warning-700")}>
-                        {f.autoRemediable ? "Approve & remediate" : "Escalate to human"}
+                      <span className={cn("rounded px-1.5 py-0.5 text-[10px] font-semibold", f.autoRun ? "bg-success-50 text-success-700" : f.autoRemediable ? "bg-info-50 text-info-700" : "bg-warning-50 text-warning-700")}>
+                        {f.autoRun ? "Automatic — no approval" : f.autoRemediable ? "Approve & remediate" : "Escalate to human"}
                       </span>
                     </td>
                   </tr>

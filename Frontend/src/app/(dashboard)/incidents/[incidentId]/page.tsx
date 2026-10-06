@@ -176,7 +176,7 @@ export default function IncidentDetailPage() {
   const ctx = { pipeline: incident.pipeline, country: incident.country };
   const emails = notifications.filter((n) => n.incidentId === incident.id);
   const status = incident.status;
-  const canApprove = status === "WAITING_APPROVAL" && def.autoRemediable;
+  const canApprove = status === "WAITING_APPROVAL" && def.autoRemediable && !def.autoRun;
   const canReject = status === "WAITING_APPROVAL" || status === "ESCALATED";
 
   const remSteps = def.remediationSteps.map((s) => fill(s, ctx));
@@ -279,7 +279,7 @@ export default function IncidentDetailPage() {
                 {status === "WAITING_APPROVAL" && !def.autoRemediable && "No safe automated remediation exists — escalate to the pipeline owner by email."}
                 {status === "ESCALATED" && "Escalated — waiting for the pipeline owner to fix the root cause."}
                 {status === "REMEDIATING" && "Remediation is running in Databricks."}
-                {status === "RESOLVED" && "This incident is resolved."}
+                {status === "RESOLVED" && (def.autoRun ? "Resolved automatically — no approval was needed. Send an email if the owner should be informed." : "This incident is resolved.")}
                 {status === "REJECTED" && "Remediation was rejected — no action was taken."}
               </p>
             </div>
@@ -346,7 +346,11 @@ export default function IncidentDetailPage() {
                 </Kv>
               </div>
               <p className="mt-3 text-xs text-text-tertiary">
-                {def.autoRemediable ? "This failure type has an approved, reversible remediation — it runs after human approval." : "This failure type has no safe automated remediation — it is escalated to a human."}
+                {def.autoRun
+                  ? "This failure type is safe to rerun — Sentinel runs the remediation by itself, with no approval."
+                  : def.autoRemediable
+                    ? "This failure type has an approved, reversible remediation — it runs after human approval."
+                    : "This failure type has no safe automated remediation — it is escalated to a human."}
               </p>
             </Step>
 
@@ -392,7 +396,9 @@ export default function IncidentDetailPage() {
                       ? "Running in Databricks"
                       : status === "RESOLVED"
                         ? def.autoRemediable
-                          ? `${def.remediationLabel} completed`
+                          ? def.autoRun
+                            ? `Auto-remediated — ${def.remediationLabel} completed`
+                            : `${def.remediationLabel} completed`
                           : "Fixed by the pipeline owner"
                         : "Rejected — not executed"
               }
@@ -405,7 +411,7 @@ export default function IncidentDetailPage() {
                 <Kv label="Remediation" mono>
                   {remediationStatus(incident)}
                 </Kv>
-                <Kv label="Approved by">{incident.approvedBy ?? "—"}</Kv>
+                <Kv label={def.autoRun ? "Authorized by" : "Approved by"}>{incident.approvedBy ?? "—"}</Kv>
                 <Kv label="Remediation run" mono>
                   {incident.remediationRunId ?? "—"}
                 </Kv>
@@ -484,7 +490,7 @@ export default function IncidentDetailPage() {
                   ["Expected classification", `${def.label} (${def.key})`],
                   ["Expected workflow", def.regression.expectedWorkflow],
                   ["Expected remediation", `${def.recommendation} — ${def.remediationLabel}`],
-                  ["Expected final state", def.autoRemediable ? "RESOLVED — validation passed" : "ESCALATED — resolved by the pipeline owner"],
+                  ["Expected final state", def.autoRemediable ? (def.autoRun ? "RESOLVED automatically — validation passed" : "RESOLVED — validation passed") : "ESCALATED — resolved by the pipeline owner"],
                   ["Current state", closed ? `RESOLVED — ${formatDateTime(incident.resolvedAt)} UTC` : status.replaceAll("_", " ")],
                 ].map(([label, value]) => (
                   <div key={label} className="grid gap-1 px-3.5 py-2.5 sm:grid-cols-[11rem_1fr]">

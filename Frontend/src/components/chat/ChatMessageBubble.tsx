@@ -4,6 +4,17 @@ import { cn, formatTime } from "@/lib/utils";
 import { ChatResultCard } from "./ChatResultCard";
 import { ChatQueryResultTable } from "./ChatQueryResultTable";
 
+/** Genie answers in light markdown — render **bold** instead of showing the asterisks. */
+function RichText({ text }: { text: string }) {
+  return (
+    <>
+      {text.split(/(\*\*[^*]+\*\*)/g).map((part, i) =>
+        part.startsWith("**") && part.endsWith("**") && part.length > 4 ? <strong key={i}>{part.slice(2, -2)}</strong> : <span key={i}>{part}</span>,
+      )}
+    </>
+  );
+}
+
 export function ChatMessageBubble({ message }: { message: ChatMessage }) {
   const isUser = message.role === "user";
 
@@ -42,7 +53,7 @@ export function ChatMessageBubble({ message }: { message: ChatMessage }) {
               </div>
             )}
             <div className={cn("max-w-full rounded-2xl rounded-tl-sm bg-surface-muted px-3.5 py-2.5 text-sm text-text-primary whitespace-pre-wrap break-words")}>
-              {message.content}
+              <RichText text={message.content} />
             </div>
             {message.queryResult && (
               <div className="pt-0.5">
