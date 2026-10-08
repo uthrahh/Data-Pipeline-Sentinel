@@ -7,7 +7,7 @@ import { PageHeader } from "@/components/common/PageHeader";
 import { EmptyState } from "@/components/common/EmptyState";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { toneStyle } from "@/lib/constants";
-import { WORKSPACE_BY_ID, PIPELINE_BY_NAME, inWorkspace } from "@/ops/catalog";
+import { NOTIFICATION_DAYS, WORKSPACE_BY_ID, PIPELINE_BY_NAME, inWorkspace } from "@/ops/catalog";
 import { FAILURE_BY_KEY, FAILURE_TYPES, type FailureKey } from "@/ops/failureTypes";
 import { useOps } from "@/ops/store";
 import { cn, formatDateTime } from "@/lib/utils";
@@ -16,14 +16,17 @@ type Kind = "ALL" | "Email" | "Escalation";
 
 export default function NotificationsPage() {
   const router = useRouter();
-  const { notifications, workspace } = useOps();
+  const { notifications, workspace, days } = useOps();
   const [kind, setKind] = useState<Kind>("ALL");
   const [failure, setFailure] = useState<FailureKey | "ALL">("ALL");
   const [query, setQuery] = useState("");
 
   const scoped = useMemo(
-    () => notifications.filter((n) => inWorkspace(PIPELINE_BY_NAME[n.pipeline]?.id ?? "", workspace)),
-    [notifications, workspace],
+    () => {
+      const cutoff = `${days[days.length - NOTIFICATION_DAYS]}T00:00:00.000Z`;
+      return notifications.filter((n) => n.sentAt >= cutoff && inWorkspace(PIPELINE_BY_NAME[n.pipeline]?.id ?? "", workspace));
+    },
+    [notifications, workspace, days],
   );
 
   const filtered = useMemo(() => {

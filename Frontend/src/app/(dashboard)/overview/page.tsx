@@ -42,7 +42,7 @@ export default function OverviewPage() {
       <div className="flex flex-col gap-5 p-4 sm:p-6">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
           <KpiCard label="Total Pipeline Runs" value={formatNumber(view.total)} supportingText="runs today" icon={Activity} accent="accent" />
-          <KpiCard label="Failed Pipeline Runs" value={formatNumber(view.failed)} deltaIsGood={false} supportingText="failed runs today" icon={AlertOctagon} accent="danger" />
+          <KpiCard label="Failed Pipeline Runs" value={formatNumber(view.failed)} deltaIsGood={false} supportingText="failures today" icon={AlertOctagon} accent="danger" />
           <KpiCard label="Pipeline Success Rate" value={formatPercent(view.successRate)} supportingText={`${view.total - view.failed} of ${view.total} runs succeeded`} icon={CheckCircle2} accent="success" />
           <KpiCard label="Max Pipeline Run Duration" value={formatDuration(view.maxDuration)} supportingText={`SLA baseline: ${SLA_BASELINE_MINUTES} min`} icon={Timer} accent="neutral" />
           <KpiCard label="Active Incidents" value={formatNumber(view.active)} supportingText="open, across all days" icon={Siren} accent="danger" />

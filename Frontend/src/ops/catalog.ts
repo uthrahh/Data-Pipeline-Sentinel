@@ -106,10 +106,15 @@ export const PIPELINES: PipelineDef[] = COUNTRIES.flatMap((c, ci) =>
 export const PIPELINE_BY_ID: Record<string, PipelineDef> = Object.fromEntries(PIPELINES.map((p) => [p.id, p]));
 export const PIPELINE_BY_NAME: Record<string, PipelineDef> = Object.fromEntries(PIPELINES.map((p) => [p.name, p]));
 
-/** The seven days ending today (oldest first), as YYYY-MM-DD in UTC. */
+/** How many days of runs and incidents the demo keeps, ending today. */
+export const WINDOW_DAYS = 15;
+/** Notifications only cover the most recent days. */
+export const NOTIFICATION_DAYS = 7;
+
+/** The days ending today (oldest first), as YYYY-MM-DD in UTC. */
 export function buildDays(today: string): string[] {
   const end = Date.parse(`${today}T00:00:00.000Z`);
-  return Array.from({ length: 7 }, (_, i) => new Date(end - (6 - i) * 86400000).toISOString().slice(0, 10));
+  return Array.from({ length: WINDOW_DAYS }, (_, i) => new Date(end - (WINDOW_DAYS - 1 - i) * 86400000).toISOString().slice(0, 10));
 }
 
 /** Average pipeline runtime used as the SLA baseline. Anything above it is critical. */

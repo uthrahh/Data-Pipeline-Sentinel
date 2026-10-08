@@ -8,14 +8,14 @@ See the [root README](../README.md) for what each page does. This file covers th
 
 | File | Purpose |
 |---|---|
-| `catalog.ts` | 15 pipelines (3 families × 5 countries: CA, DE, GB, SG, US), owners, workspaces (All / Procurement DE / Sales DE), the 7-day window, the 15-minute SLA baseline |
+| `catalog.ts` | 15 pipelines (3 families × 5 countries: CA, DE, GB, SG, US), owners, workspaces (All / Procurement DE / Sales DE), the 15-day window (notifications cover the last 7), the 15-minute SLA baseline |
 | `failureTypes.ts` | The 14 failure types (`autoRun: true` for transient/temporary — rerun automatically, no approval): recommendation, remediation, root cause, investigation steps, remediation/validation steps, planned change (e.g. compute 2 → 4 workers), solution text, regression-test definition |
-| `data.ts` | Deterministic generator for the 7 days ending **today** (the viewer's current UTC date): 40 runs a day, an incident for every failed run (18 today, covering all 14 types), 12 carried-over open incidents so 24 are active, and the emails sent in the window — each with a matching audit event |
+| `data.ts` | Deterministic generator for the 15 days ending **today** (the viewer's current UTC date): 40 runs a day, an incident for every failed run (18 today, covering all 14 types), 12 carried-over open incidents so 24 are active, and the emails sent in the window (the Notifications page shows the last 7 days) — each with a matching audit event |
 | `store.ts` | In-memory store (`useSyncExternalStore`): builds the dataset on the client, workspace selection, **approve and remediate** (simulated Databricks run that resolves, or fails and escalates automatically), **reject**, **send email / escalate** |
 | `email.ts` | Builds each email from the incident — reason plus the solution for its failure type |
 | `validation.ts` | The 7 tables and the 10 data quality checks; running a check returns a random, threshold-consistent result |
 
-The data is built in the browser (the server renders a loading skeleton, `ready: false`), so "today" and the 7-day window always follow the viewer's current date. A fixed PRNG keeps the data stable for a given date.
+The data is built in the browser (the server renders a loading skeleton, `ready: false`), so "today" and the 15-day window always follow the viewer's current date. A fixed PRNG keeps the data stable for a given date.
 
 ## Genie (the live part)
 

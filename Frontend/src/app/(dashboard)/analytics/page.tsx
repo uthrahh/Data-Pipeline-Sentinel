@@ -51,7 +51,7 @@ export default function AnalyticsPage() {
 
   return (
     <div className="flex flex-col">
-      <PageHeader title="Analytics" description={`${WORKSPACE_BY_ID[workspace].name} — pipeline outcomes, SLA health and failure types for the last 7 days.`} />
+      <PageHeader title="Analytics" description={`${WORKSPACE_BY_ID[workspace].name} — pipeline outcomes, SLA health and failure types for the last 15 days.`} />
 
       <div className="flex flex-col gap-5 p-4 sm:p-6">
         <Card>
@@ -62,7 +62,7 @@ export default function AnalyticsPage() {
         </Card>
 
         <Card>
-          <CardHeader title="Failure types" description="Number of incidents for each failure type in the last 7 days" icon={<ListChecks className="size-4" />} />
+          <CardHeader title="Failure types" description="Number of incidents for each failure type in the last 15 days" icon={<ListChecks className="size-4" />} />
           <CardBody>
             <ul className="space-y-2.5">
               {byType.map((t) => (

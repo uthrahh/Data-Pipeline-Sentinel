@@ -2,13 +2,14 @@
 
 import { useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { Search } from "lucide-react";
+import { Bot, Search } from "lucide-react";
 import { PageHeader } from "@/components/common/PageHeader";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { EmptyState } from "@/components/common/EmptyState";
 import { PIPELINE_BY_ID, WORKSPACE_BY_ID, inWorkspace } from "@/ops/catalog";
 import { approvalStatus, guardrailDecision, guardrailOf, overallStatus, remediationStatus, validationStatus } from "@/ops/derive";
 import { FAILURE_BY_KEY, FAILURE_TYPES, type FailureKey } from "@/ops/failureTypes";
+import { DayCalendar } from "@/components/pipeline/DayCalendar";
 import { useOps } from "@/ops/store";
 import { DQ_STYLES, EXECUTION_STATUS_STYLES, INCIDENT_STATUS_STYLES, SLA_STYLES } from "@/ops/styles";
 import type { Incident, PipelineRun } from "@/ops/types";
@@ -46,7 +47,27 @@ const COLUMNS: Column[] = [
         dash
       ),
   },
-  { label: "Incident Status", render: (_, i) => (i ? <StatusBadge style={INCIDENT_STATUS_STYLES[i.status]} /> : dash) },
+  { label: "Incident Status", render: (_, i) => (i ? <StatusBadge style={INCIDENT_STATUS_STYLES[i.status]} pulse={i.status === "REMEDIATING"} /> : dash) },
+  {
+    label: "Recommended Action",
+    render: (_, i) => {
+      if (!i) return dash;
+      const def = FAILURE_BY_KEY[i.failureKey];
+      return (
+        <div className="min-w-56">
+          {def.autoRun ? (
+            <span className="inline-flex items-center gap-1 rounded-md bg-success-50 px-2 py-0.5 text-xs font-semibold text-success-700 ring-1 ring-inset ring-success-500/20">
+              <Bot className="size-3" />
+              Auto Remediable
+            </span>
+          ) : (
+            <p className="font-medium text-text-primary">{def.recommendationText}</p>
+          )}
+          <p className="mt-0.5 font-mono text-[10px] text-text-tertiary">{def.recommendation}</p>
+        </div>
+      );
+    },
+  },
   { label: "Approval Status", render: (_, i) => (i ? mono(approvalStatus(i)) : dash) },
   { label: "Remediation Status", render: (_, i) => (i ? mono(remediationStatus(i)) : dash) },
   { label: "DQ Status", render: (r) => <StatusBadge style={DQ_STYLES[r.dqStatus]} /> },
@@ -56,18 +77,6 @@ const COLUMNS: Column[] = [
   { label: "Criticality", render: (_, i) => (i ? mono(i.severity) : dash) },
   { label: "Guardrail ID", render: (_, i) => (i ? mono(guardrailOf(i)) : dash) },
   { label: "Guardrail Decision", render: (_, i) => (i ? mono(guardrailDecision(i)) : dash) },
-  {
-    label: "Recommended Action",
-    render: (_, i) =>
-      i ? (
-        <div className="min-w-56">
-          <p className="font-medium text-text-primary">{FAILURE_BY_KEY[i.failureKey].recommendationText}</p>
-          <p className="mt-0.5 font-mono text-[10px] text-text-tertiary">{FAILURE_BY_KEY[i.failureKey].recommendation}</p>
-        </div>
-      ) : (
-        dash
-      ),
-  },
   { label: "Overall Status", render: (r, i) => mono(overallStatus(r, i)) },
 ];
 
@@ -107,6 +116,15 @@ export default function PipelinesPage() {
       .sort((a, b) => (a.startTime < b.startTime ? 1 : -1));
   }, [dayRuns, status, failure, query, incidentById]);
 
+  // Demo ordering: lead with up to 2 resolved incidents, then up to 2 waiting for approval, then everything else by time.
+  const ordered = useMemo(() => {
+    const statusOf = (r: PipelineRun) => incidentById.get(r.incidentId ?? "")?.status;
+    const resolved = rows.filter((r) => statusOf(r) === "RESOLVED").slice(0, 2);
+    const waiting = rows.filter((r) => statusOf(r) === "WAITING_APPROVAL").slice(0, 2);
+    const lead = new Set([...resolved, ...waiting]);
+    return [...resolved, ...waiting, ...rows.filter((r) => !lead.has(r))];
+  }, [rows, incidentById]);
+
   const stats = useMemo(() => {
     const failed = dayRuns.filter((r) => r.executionStatus !== "SUCCESS").length;
     return { total: dayRuns.length, failed, success: dayRuns.length - failed, critical: dayRuns.filter((r) => r.slaStatus === "CRITICAL").length };
@@ -114,35 +132,10 @@ export default function PipelinesPage() {
 
   return (
     <div className="flex flex-col">
-      <PageHeader title="Pipeline Runs" description={`${WORKSPACE_BY_ID[workspace].name} — every pipeline run for the last 7 days, with its incident, SLA and remediation status.`} />
+      <PageHeader title="Pipeline Runs" description={`${WORKSPACE_BY_ID[workspace].name} — every pipeline run for the last ${days.length} days, with its incident, SLA and remediation status.`} />
 
       <div className="flex flex-col gap-4 p-4 sm:p-6">
-        <div className="flex flex-wrap gap-2" role="tablist" aria-label="Select day">
-          {[...days].reverse().map((d) => {
-            const c = perDay.get(d);
-            const selected = d === day;
-            return (
-              <button
-                key={d}
-                role="tab"
-                aria-selected={selected}
-                onClick={() => setDay(d)}
-                className={cn(
-                  "rounded-lg border px-3 py-2 text-left transition-colors",
-                  selected ? "border-accent-500 bg-accent-50 text-accent-700" : "border-border bg-surface text-text-secondary hover:bg-surface-muted",
-                )}
-              >
-                <span className="block text-xs font-semibold">
-                  {dayLabel(d)}
-                  {d === today && <span className="ml-1.5 rounded bg-accent-500 px-1 py-px text-[9px] font-semibold uppercase text-white">Today</span>}
-                </span>
-                <span className="block text-[11px] text-text-tertiary">
-                  {c?.total ?? 0} runs · {c?.failed ?? 0} failed
-                </span>
-              </button>
-            );
-          })}
-        </div>
+        <DayCalendar days={days} today={today} selected={day} onSelect={setDay} summary={(d) => perDay.get(d)} />
 
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-4 text-xs text-text-secondary">
@@ -219,7 +212,7 @@ export default function PipelinesPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.map((r) => {
+                  {ordered.map((r) => {
                     const inc = r.incidentId ? incidentById.get(r.incidentId) : undefined;
                     return (
                       <tr key={r.runId} className="border-b border-border transition-colors last:border-0 hover:bg-surface-subtle">

@@ -69,17 +69,17 @@ const TODAY_PLAN: Record<string, Plan> = {
   "GOLD_SG#0": plan("TIMEOUT_FAILURE", "RESOLVED"),
 };
 
-/** Failed runs per earlier day (oldest first). */
-const PAST_FAILURES = [14, 16, 13, 17, 15, 12];
+/** Failed runs on each earlier day, keyed by how many days ago it was. */
+const PAST_FAILURES: Record<number, number> = { 1: 12, 2: 15, 3: 17, 4: 13, 5: 16, 6: 14, 7: 15, 8: 13, 9: 16, 10: 14, 11: 12, 12: 17, 13: 15, 14: 13 };
 
-/** Incidents from earlier days that are still open: 12 here + 12 open today = 24 active. */
+/** Incidents from earlier days that are still open (keyed by days ago): 12 here + 12 open today = 24 active. */
 const CARRY_OVER: Record<number, Plan[]> = {
-  5: [plan("PERMISSION_FAILURE", "WAITING_APPROVAL"), plan("DATA_CORRUPTION", "WAITING_APPROVAL", { outcome: "FAILED" }), plan("UNKNOWN", "ESCALATED"), plan("RESOURCE_EXHAUSTION", "WAITING_APPROVAL")],
-  4: [plan("REPEATED_FAILURE", "ESCALATED"), plan("SCHEMA_MISMATCH", "WAITING_APPROVAL"), plan("DQ_FAILURE", "WAITING_APPROVAL")],
+  1: [plan("PERMISSION_FAILURE", "WAITING_APPROVAL"), plan("DATA_CORRUPTION", "WAITING_APPROVAL", { outcome: "FAILED" }), plan("UNKNOWN", "ESCALATED"), plan("RESOURCE_EXHAUSTION", "WAITING_APPROVAL")],
+  2: [plan("REPEATED_FAILURE", "ESCALATED"), plan("SCHEMA_MISMATCH", "WAITING_APPROVAL"), plan("DQ_FAILURE", "WAITING_APPROVAL")],
   3: [plan("UNKNOWN", "ESCALATED")],
-  2: [plan("CONFIGURATION_FAILURE", "WAITING_APPROVAL")],
-  1: [plan("PERMISSION_FAILURE", "WAITING_APPROVAL")],
-  0: [plan("SOURCE_FILE_UNAVAILABLE", "WAITING_APPROVAL"), plan("REPEATED_FAILURE", "ESCALATION_REQUIRED")],
+  4: [plan("CONFIGURATION_FAILURE", "WAITING_APPROVAL")],
+  5: [plan("PERMISSION_FAILURE", "WAITING_APPROVAL")],
+  6: [plan("SOURCE_FILE_UNAVAILABLE", "WAITING_APPROVAL"), plan("REPEATED_FAILURE", "ESCALATION_REQUIRED")],
 };
 
 const HEX = "0123456789ABCDEF";
@@ -105,7 +105,7 @@ function iso(ms: number): string {
   return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}T${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())}.${String(d.getUTCMilliseconds()).padStart(3, "0")}Z`;
 }
 
-function planFailures(dayIdx: number, day: string, today: string): Map<number, Plan> {
+function planFailures(ago: number, day: string, today: string): Map<number, Plan> {
   const map = new Map<number, Plan>();
 
   if (day === today) {
@@ -117,8 +117,8 @@ function planFailures(dayIdx: number, day: string, today: string): Map<number, P
   }
 
   const rand = seededRandom(`failures:${day}`);
-  const order = seededShuffle(rand, SLOTS.map((_, i) => i)).slice(0, PAST_FAILURES[dayIdx]);
-  const forced = CARRY_OVER[dayIdx] ?? [];
+  const order = seededShuffle(rand, SLOTS.map((_, i) => i)).slice(0, PAST_FAILURES[ago] ?? 14);
+  const forced = CARRY_OVER[ago] ?? [];
   const typeCycle = seededShuffle(rand, FAILURE_TYPES.map((f) => f.key));
   let cycle = 0;
   let counter = 0;
@@ -228,7 +228,7 @@ function buildStory(incident: Incident, def: FailureTypeDef, pl: Plan, rand: () 
   return { audit, mailAt, mailKind };
 }
 
-/** Builds the whole demo dataset for the seven days ending on the day of `nowMs` (UTC). */
+/** Builds the whole demo dataset for the days ending on the day of `nowMs` (UTC). */
 export function generateDataset(nowMs: number): Dataset {
   const today = new Date(nowMs).toISOString().slice(0, 10);
   const days = buildDays(today);
@@ -242,7 +242,7 @@ export function generateDataset(nowMs: number): Dataset {
   days.forEach((day, dayIdx) => {
     const isToday = day === today;
     const rand = seededRandom(`day:${day}`);
-    const failures = planFailures(dayIdx, day, today);
+    const failures = planFailures(days.length - 1 - dayIdx, day, today);
     const base = Date.parse(`${day}T00:00:00.000Z`);
     const window = Math.max(240, minutesNow);
     const step = Math.max(2, (window - 100) / 40);

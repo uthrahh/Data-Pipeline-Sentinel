@@ -198,7 +198,7 @@ export default function DataValidationPage() {
       <div className="flex flex-col gap-5 p-4 sm:p-6">
         <Section
           title="Source tables"
-          description="Raw SAP extracts that feed the pipelines. Click a table name to open its checks, then click Test on a check to run it."
+          description="Raw SAP extracts that feed the pipeline runs. Expand the arrow to open the checks."
           tables={VALIDATION_TABLES.filter((t) => t.role === "SOURCE")}
           expanded={expanded}
           onToggle={toggle}
@@ -208,7 +208,7 @@ export default function DataValidationPage() {
         />
         <Section
           title="Resulting tables"
-          description="Silver and gold tables produced by the pipelines. Click a table name to open its checks, then click Test on a check to run it."
+          description="Silver and Gold tables populated by the pipeline runs. Expand the arrow to open the checks."
           tables={VALIDATION_TABLES.filter((t) => t.role === "RESULT")}
           expanded={expanded}
           onToggle={toggle}
