@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { createPortal } from "react-dom";
 import { useEffect, useState } from "react";
-import { Activity, AlertOctagon, Gauge, LayoutGrid, Mail, ShieldCheck, X } from "lucide-react";
+import { Activity, AlertOctagon, Gauge, LayoutGrid, LineChart, Mail, ShieldCheck, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
@@ -13,6 +13,7 @@ const NAV_ITEMS = [
   { href: "/incidents", label: "Incidents", icon: AlertOctagon },
   { href: "/notifications", label: "Notifications", icon: Mail },
   { href: "/data-validation", label: "Data Validation", icon: ShieldCheck },
+  { href: "/analytics", label: "Analytics", icon: LineChart },
 ];
 
 export function MobileNav({ open, onClose }: { open: boolean; onClose: () => void }) {

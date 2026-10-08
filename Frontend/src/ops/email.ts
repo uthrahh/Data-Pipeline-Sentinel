@@ -30,10 +30,16 @@ export function buildEmail(incident: Incident): EmailDraft {
       ? `CRITICAL — runtime ${incident.durationMinutes} min vs ${SLA_BASELINE_MINUTES} min baseline`
       : `Safe — runtime ${incident.durationMinutes} min vs ${SLA_BASELINE_MINUTES} min baseline`;
 
+  const why = incident.remediationFailed
+    ? "Sentinel tried to fix this automatically, but the remediation did not succeed, so the incident is being escalated to you."
+    : !def.autoRemediable
+      ? "Sentinel cannot fix this failure automatically, so the incident is being escalated to you."
+      : "This is an update on an incident for a pipeline you own.";
+
   const body = [
     `Hi ${first},`,
     "",
-    `Pipeline "${incident.pipeline}" (${COUNTRY_LABEL[incident.country]}) failed at ${utc(incident.detectedAt)}. Sentinel opened incident ${incident.id} and completed an AI investigation.`,
+    `Pipeline "${incident.pipeline}" (${COUNTRY_LABEL[incident.country]}) failed at ${utc(incident.detectedAt)}. Sentinel opened incident ${incident.id} and completed an AI investigation. ${why}`,
     "",
     "WHAT HAPPENED",
     `- Failure type: ${def.label}`,
@@ -44,7 +50,7 @@ export function buildEmail(incident: Incident): EmailDraft {
     "WHAT TO DO",
     ...resolution.map((s, i) => `${i + 1}. ${s}`),
     "",
-    `Recommended action: ${def.recommendation} (${def.remediationLabel})`,
+    `Recommended action: ${def.recommendationText}`,
     `Incident: /incidents/${incident.id}`,
     "",
     "— Sentinel AI Pipeline",

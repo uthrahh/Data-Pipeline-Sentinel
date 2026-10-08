@@ -96,7 +96,7 @@ function Section({
                     <tr className="border-b border-border bg-surface-subtle">
                       <td colSpan={7} className="px-5 pb-5 pt-1">
                         <div className="mb-3 flex items-center justify-between gap-3">
-                          <p className="text-xs text-text-tertiary">10 data quality checks for {t.tableName}. Run a test to see its result.</p>
+                          <p className="text-xs text-text-tertiary">{t.tableName} has 10 data quality checks. Click Test on a check to run it, or run all 10 at once.</p>
                           <Button size="sm" onClick={() => onRunAll(t.tableName)} disabled={anyRunning}>
                             <Play className="size-3" />
                             Run all checks
@@ -194,11 +194,11 @@ export default function DataValidationPage() {
 
   return (
     <div className="flex flex-col">
-      <PageHeader title="Data Validation" description="Run the 10 data quality checks on every source table and on every table the pipelines produce." />
+      <PageHeader title="Data Validation" description="Run the 10 data quality checks on every source table and on every table that the pipelines produce." />
       <div className="flex flex-col gap-5 p-4 sm:p-6">
         <Section
           title="Source tables"
-          description="Raw SAP extracts that feed the pipelines — click a table to open its checks."
+          description="Raw SAP extracts that feed the pipelines. Click a table name to open its checks, then click Test on a check to run it."
           tables={VALIDATION_TABLES.filter((t) => t.role === "SOURCE")}
           expanded={expanded}
           onToggle={toggle}
@@ -208,7 +208,7 @@ export default function DataValidationPage() {
         />
         <Section
           title="Resulting tables"
-          description="Silver and gold tables produced by the pipelines — click a table to open its checks."
+          description="Silver and gold tables produced by the pipelines. Click a table name to open its checks, then click Test on a check to run it."
           tables={VALIDATION_TABLES.filter((t) => t.role === "RESULT")}
           expanded={expanded}
           onToggle={toggle}

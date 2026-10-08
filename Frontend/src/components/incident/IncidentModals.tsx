@@ -11,7 +11,7 @@ import type { AppNotification, Incident } from "@/ops/types";
 import { WORKSPACE_BY_ID, PIPELINE_BY_ID } from "@/ops/catalog";
 import { formatDateTime } from "@/lib/utils";
 
-export function EmailModal({ incident, open, onClose }: { incident: Incident; open: boolean; onClose: () => void }) {
+export function EmailModal({ incident, open, onClose, escalating }: { incident: Incident; open: boolean; onClose: () => void; escalating: boolean }) {
   const [sent, setSent] = useState<AppNotification | null>(null);
   const draft = buildEmail(incident);
 
@@ -25,7 +25,7 @@ export function EmailModal({ incident, open, onClose }: { incident: Incident; op
       <Modal
         open={open}
         onClose={close}
-        title="Email sent"
+        title={sent.kind === "Escalation" ? "Escalation email sent" : "Email sent"}
         footer={
           <>
             <Link href="/notifications" className="inline-flex h-9 items-center rounded-lg border border-border-strong px-4 text-sm font-medium text-text-secondary hover:bg-surface-muted">
@@ -39,9 +39,9 @@ export function EmailModal({ incident, open, onClose }: { incident: Incident; op
           <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-success-600" />
           <div className="text-sm text-text-secondary">
             <p>
-              The escalation email for <span className="font-mono text-xs text-text-primary">{incident.id}</span> was sent to <strong className="text-text-primary">{sent.recipient.name}</strong> ({sent.recipient.email}).
+              The {sent.kind === "Escalation" ? "escalation " : ""}email for <span className="font-mono text-xs text-text-primary">{incident.id}</span> was sent to <strong className="text-text-primary">{sent.recipient.name}</strong> ({sent.recipient.email}).
             </p>
-            <p className="mt-2 text-xs text-text-tertiary">It is now listed under Notifications as {sent.id}.</p>
+            <p className="mt-2 text-xs text-text-tertiary">{sent.kind === "Escalation" ? "The incident is now escalated. " : ""}You can find it under Notifications as {sent.id}.</p>
           </div>
         </div>
       </Modal>
@@ -53,8 +53,8 @@ export function EmailModal({ incident, open, onClose }: { incident: Incident; op
       open={open}
       onClose={close}
       size="md"
-      title="Escalate by email"
-      description="The email is generated from this incident — including the reason and the recommended solution."
+      title={escalating ? "Escalate by email" : "Send an email"}
+      description="This email is generated from the incident. It includes the reason for the failure and the recommended solution."
       footer={
         <>
           <Button variant="secondary" onClick={close}>
@@ -62,7 +62,7 @@ export function EmailModal({ incident, open, onClose }: { incident: Incident; op
           </Button>
           <Button onClick={() => setSent(sendEmail(incident.id))}>
             <Mail className="size-3.5" />
-            Send email
+            {escalating ? "Escalate and send" : "Send email"}
           </Button>
         </>
       }
@@ -126,7 +126,7 @@ export function RemediationStartedModal({ info, onClose }: { info: RemediationSt
                 <dd className="text-text-primary">{formatDateTime(info.startedAt)} UTC</dd>
               </div>
             </dl>
-            <p className="mt-3 text-xs text-text-tertiary">The incident updates automatically once the run is validated.</p>
+            <p className="mt-3 text-xs text-text-tertiary">The incident updates automatically when the run finishes and is validated.</p>
           </div>
         </div>
       )}

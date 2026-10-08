@@ -7,7 +7,7 @@ import { PageHeader } from "@/components/common/PageHeader";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { EmptyState } from "@/components/common/EmptyState";
 import { Card, CardHeader } from "@/components/common/Card";
-import { TODAY, WORKSPACE_BY_ID, inWorkspace } from "@/ops/catalog";
+import { WORKSPACE_BY_ID, inWorkspace } from "@/ops/catalog";
 import { isActive } from "@/ops/derive";
 import { FAILURE_BY_KEY, FAILURE_TYPES, type FailureKey } from "@/ops/failureTypes";
 import { useOps } from "@/ops/store";
@@ -22,16 +22,17 @@ type StatusFilter = "ALL" | "ACTIVE" | IncidentStatus;
 const STATUS_OPTIONS: { value: StatusFilter; label: string }[] = [
   { value: "ALL", label: "All" },
   { value: "ACTIVE", label: "Active" },
-  { value: "WAITING_APPROVAL", label: "Waiting approval" },
-  { value: "ESCALATED", label: "Escalated" },
-  { value: "REMEDIATING", label: "Remediating" },
   { value: "RESOLVED", label: "Resolved" },
+  { value: "REMEDIATING", label: "Remediating" },
+  { value: "WAITING_APPROVAL", label: "Waiting for approval" },
+  { value: "ESCALATION_REQUIRED", label: "Escalation required" },
+  { value: "ESCALATED", label: "Escalated" },
   { value: "REJECTED", label: "Rejected" },
 ];
 
 export default function IncidentsPage() {
   const router = useRouter();
-  const { incidents, workspace } = useOps();
+  const { incidents, workspace, today } = useOps();
   const [status, setStatus] = useState<StatusFilter>("ALL");
   const [failure, setFailure] = useState<FailureKey | "ALL">("ALL");
   const [query, setQuery] = useState("");
@@ -52,11 +53,11 @@ export default function IncidentsPage() {
     () => ({
       total: scoped.length,
       active: scoped.filter(isActive).length,
-      today: scoped.filter((i) => i.date === TODAY).length,
+      today: scoped.filter((i) => i.date === today).length,
       resolved: scoped.filter((i) => i.status === "RESOLVED").length,
       critical: scoped.filter((i) => i.severity === "CRITICAL" && isActive(i)).length,
     }),
-    [scoped],
+    [scoped, today],
   );
 
   const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
@@ -67,7 +68,7 @@ export default function IncidentsPage() {
     <div className="flex flex-col">
       <PageHeader
         title="Incidents"
-        description={`${WORKSPACE_BY_ID[workspace].name} — every pipeline incident, from creation through AI investigation and remediation.`}
+        description={`${WORKSPACE_BY_ID[workspace].name} — every pipeline incident from the last 7 days, from creation through AI investigation to remediation.`}
       />
 
       <div className="flex flex-col gap-5 p-4 sm:p-6">
@@ -76,7 +77,7 @@ export default function IncidentsPage() {
             { label: "All incidents", value: counts.total },
             { label: "Created today", value: counts.today },
             { label: "Active", value: counts.active },
-            { label: "Critical & active", value: counts.critical },
+            { label: "Critical and active", value: counts.critical },
             { label: "Resolved", value: counts.resolved },
           ].map((c) => (
             <div key={c.label} className="rounded-xl border border-border bg-surface px-4 py-3">
@@ -126,7 +127,7 @@ export default function IncidentsPage() {
                   setQuery(e.target.value);
                   setPage(1);
                 }}
-                placeholder="Search incident, pipeline or failure"
+                placeholder="Search by incident, pipeline or failure type"
                 aria-label="Search incidents"
                 className="w-56 bg-transparent text-xs text-text-primary outline-none placeholder:text-text-tertiary"
               />
@@ -146,7 +147,7 @@ export default function IncidentsPage() {
                     <th className="px-4 py-2.5">Severity</th>
                     <th className="px-4 py-2.5">SLA</th>
                     <th className="px-4 py-2.5">Status</th>
-                    <th className="px-4 py-2.5">Recommendation</th>
+                    <th className="px-4 py-2.5">Recommended Action</th>
                     <th className="px-4 py-2.5">Detected</th>
                     <th className="px-4 py-2.5">Email</th>
                   </tr>
@@ -175,7 +176,7 @@ export default function IncidentsPage() {
                         <td className="px-4 py-3">
                           <StatusBadge style={INCIDENT_STATUS_STYLES[i.status]} pulse={i.status === "REMEDIATING"} />
                         </td>
-                        <td className="whitespace-nowrap px-4 py-3 font-mono text-[11px] text-text-secondary">{def.recommendation}</td>
+                        <td className="px-4 py-3 text-text-secondary">{def.recommendationText}</td>
                         <td className="whitespace-nowrap px-4 py-3 text-text-secondary">{formatDateTime(i.detectedAt)}</td>
                         <td className="px-4 py-3">{i.emailSent ? <Mail className="size-3.5 text-success-600" aria-label="Email sent" /> : <span className="text-text-tertiary">—</span>}</td>
                       </tr>
@@ -213,7 +214,7 @@ export default function IncidentsPage() {
         </div>
 
         <Card>
-          <CardHeader title="Failure scenarios & remediation playbook" description="How Sentinel classifies each failure type and what remediation it applies." />
+          <CardHeader title="Failure types and remediation playbook" description="How Sentinel classifies each failure type and which remediation it applies." />
           <div className="overflow-x-auto">
             <table className="w-full min-w-[820px] border-collapse text-left text-xs">
               <thead>
@@ -221,7 +222,7 @@ export default function IncidentsPage() {
                   <th className="px-5 py-2.5">#</th>
                   <th className="px-4 py-2.5">Failure Type</th>
                   <th className="px-4 py-2.5">Example Pipeline</th>
-                  <th className="px-4 py-2.5">Recommendation</th>
+                  <th className="px-4 py-2.5">Recommended Action</th>
                   <th className="px-4 py-2.5">Remediation</th>
                   <th className="px-4 py-2.5">Path</th>
                 </tr>
@@ -235,11 +236,11 @@ export default function IncidentsPage() {
                       <span className="ml-2 font-mono text-[10px] text-text-tertiary">{f.key}</span>
                     </td>
                     <td className="px-4 py-2.5 text-text-secondary">{f.index % 2 === 1 ? "Material Master Processing US" : "Procurement & Sales Processing US"}</td>
-                    <td className="px-4 py-2.5 font-mono text-[11px] text-text-secondary">{f.recommendation}</td>
+                    <td className="px-4 py-2.5 text-text-secondary">{f.recommendationText}</td>
                     <td className="px-4 py-2.5 text-text-secondary">{f.remediationLabel}</td>
                     <td className="px-4 py-2.5">
                       <span className={cn("rounded px-1.5 py-0.5 text-[10px] font-semibold", f.autoRun ? "bg-success-50 text-success-700" : f.autoRemediable ? "bg-info-50 text-info-700" : "bg-warning-50 text-warning-700")}>
-                        {f.autoRun ? "Automatic — no approval" : f.autoRemediable ? "Approve & remediate" : "Escalate to human"}
+                        {f.autoRun ? "AI automatically" : f.autoRemediable ? "AI after approval" : "A person (escalation)"}
                       </span>
                     </td>
                   </tr>

@@ -6,8 +6,8 @@ import { Search } from "lucide-react";
 import { PageHeader } from "@/components/common/PageHeader";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { EmptyState } from "@/components/common/EmptyState";
-import { DAYS, TODAY, WORKSPACE_BY_ID, inWorkspace } from "@/ops/catalog";
-import { approvalStatus, guardrailDecision, guardrailOf, overallStatus, recommendationOf, remediationStatus, validationStatus } from "@/ops/derive";
+import { PIPELINE_BY_ID, WORKSPACE_BY_ID, inWorkspace } from "@/ops/catalog";
+import { approvalStatus, guardrailDecision, guardrailOf, overallStatus, remediationStatus, validationStatus } from "@/ops/derive";
 import { FAILURE_BY_KEY, FAILURE_TYPES, type FailureKey } from "@/ops/failureTypes";
 import { useOps } from "@/ops/store";
 import { DQ_STYLES, EXECUTION_STATUS_STYLES, INCIDENT_STATUS_STYLES, SLA_STYLES } from "@/ops/styles";
@@ -27,14 +27,13 @@ const dash = <span className="text-text-tertiary">—</span>;
 
 const COLUMNS: Column[] = [
   { label: "Pipeline", className: "sticky left-0 z-10 bg-surface", render: (r) => <span className="font-medium text-text-primary">{r.pipeline}</span> },
+  { label: "Responsible Person", render: (r) => <span className="font-medium text-text-primary">{PIPELINE_BY_ID[r.pipelineId]?.owner.name ?? "—"}</span> },
   { label: "Job ID", render: (r) => mono(r.jobId) },
   { label: "Run ID", render: (r) => mono(r.runId) },
   { label: "Start Time", render: (r) => <span className="text-text-secondary">{formatDateTime(r.startTime)}</span> },
   { label: "End Time", render: (r) => <span className="text-text-secondary">{formatDateTime(r.endTime)}</span> },
   { label: "Duration", render: (r) => <span className="text-text-secondary">{formatDuration(r.durationMinutes)}</span> },
   { label: "Execution Status", render: (r) => <StatusBadge style={EXECUTION_STATUS_STYLES[r.executionStatus]} /> },
-  { label: "Trigger Type", render: (r) => mono(r.triggerType) },
-  { label: "Run Type", render: (r) => mono(r.runType) },
   { label: "Detected At", render: (r) => <span className="text-text-secondary">{formatDateTime(r.detectedAt)}</span> },
   {
     label: "Incident ID",
@@ -57,7 +56,18 @@ const COLUMNS: Column[] = [
   { label: "Criticality", render: (_, i) => (i ? mono(i.severity) : dash) },
   { label: "Guardrail ID", render: (_, i) => (i ? mono(guardrailOf(i)) : dash) },
   { label: "Guardrail Decision", render: (_, i) => (i ? mono(guardrailDecision(i)) : dash) },
-  { label: "Recommended Action", render: (_, i) => (i ? mono(recommendationOf(i)) : dash) },
+  {
+    label: "Recommended Action",
+    render: (_, i) =>
+      i ? (
+        <div className="min-w-56">
+          <p className="font-medium text-text-primary">{FAILURE_BY_KEY[i.failureKey].recommendationText}</p>
+          <p className="mt-0.5 font-mono text-[10px] text-text-tertiary">{FAILURE_BY_KEY[i.failureKey].recommendation}</p>
+        </div>
+      ) : (
+        dash
+      ),
+  },
   { label: "Overall Status", render: (r, i) => mono(overallStatus(r, i)) },
 ];
 
@@ -66,8 +76,8 @@ function dayLabel(day: string): string {
 }
 
 export default function PipelinesPage() {
-  const { runs, incidents, workspace } = useOps();
-  const [day, setDay] = useState<string>(TODAY);
+  const { runs, incidents, workspace, days, today } = useOps();
+  const [day, setDay] = useState<string>(today);
   const [status, setStatus] = useState<StatusFilter>("ALL");
   const [failure, setFailure] = useState<FailureKey | "ALL">("ALL");
   const [query, setQuery] = useState("");
@@ -104,11 +114,11 @@ export default function PipelinesPage() {
 
   return (
     <div className="flex flex-col">
-      <PageHeader title="Pipeline Runs" description={`${WORKSPACE_BY_ID[workspace].name} — every pipeline run for the selected day, with its incident, SLA and remediation state.`} />
+      <PageHeader title="Pipeline Runs" description={`${WORKSPACE_BY_ID[workspace].name} — every pipeline run for the last 7 days, with its incident, SLA and remediation status.`} />
 
       <div className="flex flex-col gap-4 p-4 sm:p-6">
         <div className="flex flex-wrap gap-2" role="tablist" aria-label="Select day">
-          {[...DAYS].reverse().map((d) => {
+          {[...days].reverse().map((d) => {
             const c = perDay.get(d);
             const selected = d === day;
             return (
@@ -124,7 +134,7 @@ export default function PipelinesPage() {
               >
                 <span className="block text-xs font-semibold">
                   {dayLabel(d)}
-                  {d === TODAY && <span className="ml-1.5 rounded bg-accent-500 px-1 py-px text-[9px] font-semibold uppercase text-white">Today</span>}
+                  {d === today && <span className="ml-1.5 rounded bg-accent-500 px-1 py-px text-[9px] font-semibold uppercase text-white">Today</span>}
                 </span>
                 <span className="block text-[11px] text-text-tertiary">
                   {c?.total ?? 0} runs · {c?.failed ?? 0} failed
@@ -227,7 +237,7 @@ export default function PipelinesPage() {
           )}
         </div>
         <p className="text-[11px] text-text-tertiary">
-          Showing {rows.length} of {stats.total} runs for {dayLabel(day)}. All times UTC.
+          Showing {rows.length} of {stats.total} runs for {dayLabel(day)}. All times are in UTC.
         </p>
       </div>
     </div>

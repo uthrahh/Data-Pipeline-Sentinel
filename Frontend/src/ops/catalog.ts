@@ -35,15 +35,22 @@ export const WORKSPACE_BY_ID: Record<WorkspaceId, Workspace> = Object.fromEntrie
 
 /** The pool of pipeline owners — escalation emails go to whoever owns the affected pipeline. */
 export const PEOPLE: Person[] = [
-  { name: "Tomas Alvarez", email: "tomas.alvarez@sentinel.ai" },
-  { name: "Ravi Kimura", email: "ravi.kimura@sentinel.ai" },
-  { name: "Priya Reddy", email: "priya.reddy@sentinel.ai" },
-  { name: "Lea Fontaine", email: "lea.fontaine@sentinel.ai" },
-  { name: "Sade Okafor", email: "sade.okafor@sentinel.ai" },
-  { name: "Marc Dubois", email: "marc.dubois@sentinel.ai" },
-  { name: "Anil Singh", email: "anil.singh@sentinel.ai" },
-  { name: "Jun Nakamura", email: "jun.nakamura@sentinel.ai" },
-];
+  "Tomas Alvarez",
+  "Ravi Kimura",
+  "Priya Reddy",
+  "Lea Fontaine",
+  "Sade Okafor",
+  "Marc Dubois",
+  "Anil Singh",
+  "Jun Nakamura",
+  "Carla Mendes",
+  "Hannah Weber",
+  "Omar Haddad",
+  "Mei Tanaka",
+  "Daniel Brooks",
+  "Fatima Khan",
+  "Lucas Moreau",
+].map((name) => ({ name, email: `${name.toLowerCase().replace(" ", ".")}@sentinel.ai` }));
 
 export interface PipelineDef {
   id: string;
@@ -89,7 +96,7 @@ export const PIPELINES: PipelineDef[] = COUNTRIES.flatMap((c, ci) =>
       family,
       country: c.code,
       jobId: jobIdFor(name),
-      owner: PEOPLE[(ci * 3 + fi) % PEOPLE.length],
+      owner: PEOPLE[ci * 3 + fi],
       workspaceId: family === "GOLD" ? "sales-de" : "procurement-de",
       runsPerDay: RUNS_PER_DAY[c.code][family],
     } satisfies PipelineDef;
@@ -99,9 +106,11 @@ export const PIPELINES: PipelineDef[] = COUNTRIES.flatMap((c, ci) =>
 export const PIPELINE_BY_ID: Record<string, PipelineDef> = Object.fromEntries(PIPELINES.map((p) => [p.id, p]));
 export const PIPELINE_BY_NAME: Record<string, PipelineDef> = Object.fromEntries(PIPELINES.map((p) => [p.name, p]));
 
-/** The static "now": all data is a fixed 7-day window ending today. */
-export const DAYS = ["2026-09-30", "2026-10-01", "2026-10-02", "2026-10-03", "2026-10-04", "2026-10-05", "2026-10-06"] as const;
-export const TODAY = DAYS[DAYS.length - 1];
+/** The seven days ending today (oldest first), as YYYY-MM-DD in UTC. */
+export function buildDays(today: string): string[] {
+  const end = Date.parse(`${today}T00:00:00.000Z`);
+  return Array.from({ length: 7 }, (_, i) => new Date(end - (6 - i) * 86400000).toISOString().slice(0, 10));
+}
 
 /** Average pipeline runtime used as the SLA baseline. Anything above it is critical. */
 export const SLA_BASELINE_MINUTES = 15;

@@ -3,7 +3,14 @@ import type { FailureKey } from "./failureTypes";
 
 export type Severity = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
 
-export type IncidentStatus = "WAITING_APPROVAL" | "ESCALATED" | "REMEDIATING" | "RESOLVED" | "REJECTED";
+export type IncidentStatus =
+  | "WAITING_APPROVAL"
+  | "REMEDIATING"
+  | "FAILED"
+  | "ESCALATION_REQUIRED"
+  | "ESCALATED"
+  | "RESOLVED"
+  | "REJECTED";
 
 export type ExecutionStatus = "SUCCESS" | "FAILED" | "TIMEDOUT";
 
@@ -19,8 +26,6 @@ export interface PipelineRun {
   endTime: string;
   durationMinutes: number;
   executionStatus: ExecutionStatus;
-  triggerType: "PERIODIC" | "ONE_TIME";
-  runType: "JOB_RUN";
   detectedAt: string;
   incidentId: string | null;
   dqStatus: "PASS" | "FAIL" | "N/A";
@@ -58,6 +63,10 @@ export interface Incident {
   remediationStartedAt: string | null;
   resolvedAt: string | null;
   emailSent: boolean;
+  /** Whether the remediation attempt (automatic or approved) failed — drives the escalation path. */
+  remediationFailed: boolean;
+  /** What will happen if this incident is approved and remediated in the demo. */
+  remediationOutcome: "SUCCESS" | "FAILED";
   audit: AuditEvent[];
 }
 

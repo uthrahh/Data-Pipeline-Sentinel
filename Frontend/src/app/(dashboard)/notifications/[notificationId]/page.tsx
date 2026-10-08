@@ -89,7 +89,7 @@ export default function NotificationDetailPage() {
         </Card>
 
         <Card>
-          <CardHeader title="Resolution" description="What the recipient was asked to do." />
+          <CardHeader title="Resolution" description="What the recipient is asked to do." />
           <CardBody>
             <ul className="space-y-2">
               {n.resolution.map((r, idx) => (

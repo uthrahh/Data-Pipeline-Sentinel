@@ -18,6 +18,8 @@ export class ApiError extends Error {
   }
 }
 
+const REQUEST_TIMEOUT_MS = 110_000;
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   if (!API_BASE_URL) {
     throw new ApiError(
@@ -25,8 +27,10 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       503,
     );
   }
+  // Genie can take a while to query the data, but never hang the chat forever.
   const res = await fetch(`${API_BASE_URL}${path}`, {
     ...init,
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     headers: {
       "Content-Type": "application/json",
       ...init?.headers,

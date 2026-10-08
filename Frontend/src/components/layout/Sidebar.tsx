@@ -7,6 +7,7 @@ import {
   AlertOctagon,
   Gauge,
   LayoutGrid,
+  LineChart,
   Mail,
   ShieldCheck,
 } from "lucide-react";
@@ -18,6 +19,7 @@ const NAV_ITEMS = [
   { href: "/incidents", label: "Incidents", icon: AlertOctagon },
   { href: "/notifications", label: "Notifications", icon: Mail },
   { href: "/data-validation", label: "Data Validation", icon: ShieldCheck },
+  { href: "/analytics", label: "Analytics", icon: LineChart },
 ];
 
 export function Sidebar({ className }: { className?: string }) {

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import {
+  AlertCircle,
   ArrowLeft,
   ArrowRight,
   BrainCircuit,
@@ -18,9 +19,10 @@ import {
   ThumbsDown,
   ThumbsUp,
   Timer,
+  UserRound,
   Wrench,
   XCircle,
-  AlertCircle,
+  Bot,
   type LucideIcon,
 } from "lucide-react";
 import { PageHeader } from "@/components/common/PageHeader";
@@ -32,14 +34,15 @@ import { AuditTimeline } from "@/components/pipeline/AuditTimeline";
 import { EmailModal, RemediationStartedModal } from "@/components/incident/IncidentModals";
 import { COUNTRY_LABEL, SLA_BASELINE_MINUTES } from "@/ops/catalog";
 import { approvalStatus, guardrailDecision, guardrailOf, remediationStatus, validationStatus } from "@/ops/derive";
-import { FAILURE_BY_KEY } from "@/ops/failureTypes";
+import { FAILURE_BY_KEY, type FailureTypeDef } from "@/ops/failureTypes";
 import { approveAndRemediate, rejectIncident, useOps, type RemediationStart } from "@/ops/store";
 import { INCIDENT_STATUS_STYLES, SEVERITY_STYLES, SLA_STYLES } from "@/ops/styles";
 import { fill } from "@/ops/text";
 import type { Incident } from "@/ops/types";
 import { cn, formatDateTime, formatDuration } from "@/lib/utils";
 
-type StepState = "done" | "active" | "pending" | "blocked";
+type StepState = "done" | "active" | "pending" | "blocked" | "failed";
+type NodeState = "done" | "current" | "pending" | "failed";
 
 const REMEDIATION_RUN_MS = 7000;
 
@@ -54,18 +57,15 @@ function Kv({ label, children, mono }: { label: string; children: ReactNode; mon
 
 function StepIcon({ state, n }: { state: StepState; n: number }) {
   if (state === "done") return <CheckCircle2 className="size-6 text-success-600" />;
+  if (state === "failed") return <XCircle className="size-6 text-danger-500" />;
   if (state === "blocked") return <XCircle className="size-6 text-text-tertiary" />;
   if (state === "active")
     return (
-      <span className="flex size-6 items-center justify-center rounded-full bg-accent-500 text-[11px] font-semibold text-white">
+      <span className="flex size-6 items-center justify-center rounded-full bg-accent-500 text-white">
         <Loader2 className="size-3.5 animate-spin" aria-label={`Step ${n} in progress`} />
       </span>
     );
-  return (
-    <span className="flex size-6 items-center justify-center rounded-full border border-border-strong bg-surface text-[11px] font-semibold text-text-tertiary">
-      {n}
-    </span>
-  );
+  return <span className="flex size-6 items-center justify-center rounded-full border border-border-strong bg-surface text-[11px] font-semibold text-text-tertiary">{n}</span>;
 }
 
 function Step({
@@ -95,11 +95,7 @@ function Step({
         <StepIcon state={state} n={n} />
       </div>
       <div className="min-w-0 flex-1 pb-5">
-        <button
-          onClick={() => setOpen((v) => !v)}
-          aria-expanded={open}
-          className="flex w-full items-start justify-between gap-3 rounded-lg px-1 py-1 text-left transition-colors hover:bg-surface-subtle"
-        >
+        <button onClick={() => setOpen((v) => !v)} aria-expanded={open} className="flex w-full items-start justify-between gap-3 rounded-lg px-1 py-1 text-left transition-colors hover:bg-surface-subtle">
           <div className="min-w-0">
             <p className="flex items-center gap-2 text-sm font-semibold text-text-primary">
               <Icon className="size-3.5 text-text-tertiary" />
@@ -115,26 +111,115 @@ function Step({
   );
 }
 
-function Checklist({ items, doneCount, activeIndex }: { items: string[]; doneCount: number; activeIndex?: number }) {
+type ItemState = "done" | "active" | "failed" | "pending";
+
+function Checklist({ items }: { items: { text: string; state: ItemState; by?: "ai" | "person" }[] }) {
   return (
     <ul className="space-y-2">
-      {items.map((text, idx) => {
-        const done = idx < doneCount;
-        const active = !done && idx === activeIndex;
-        return (
-          <li key={idx} className="flex items-start gap-2.5 text-sm">
-            {done ? (
-              <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-success-600" />
-            ) : active ? (
-              <Loader2 className="mt-0.5 size-4 shrink-0 animate-spin text-accent-500" />
-            ) : (
-              <Circle className="mt-0.5 size-4 shrink-0 text-border-strong" />
-            )}
-            <span className={cn(done || active ? "text-text-primary" : "text-text-tertiary")}>{text}</span>
-          </li>
-        );
-      })}
+      {items.map((item, idx) => (
+        <li key={idx} className="flex items-start gap-2.5 text-sm">
+          {item.state === "done" ? (
+            <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-success-600" />
+          ) : item.state === "active" ? (
+            <Loader2 className="mt-0.5 size-4 shrink-0 animate-spin text-accent-500" />
+          ) : item.state === "failed" ? (
+            <XCircle className="mt-0.5 size-4 shrink-0 text-danger-500" />
+          ) : (
+            <Circle className="mt-0.5 size-4 shrink-0 text-border-strong" />
+          )}
+          <span className={cn("flex-1", item.state === "pending" ? "text-text-tertiary" : item.state === "failed" ? "text-danger-700" : "text-text-primary")}>{item.text}</span>
+          {item.by && (
+            <span className={cn("mt-0.5 flex shrink-0 items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold", item.by === "ai" ? "bg-accent-50 text-accent-700" : "bg-warning-50 text-warning-700")}>
+              {item.by === "ai" ? <Bot className="size-3" /> : <UserRound className="size-3" />}
+              {item.by === "ai" ? "AI" : "Person"}
+            </span>
+          )}
+        </li>
+      ))}
     </ul>
+  );
+}
+
+interface FlowNode {
+  label: string;
+  state: NodeState;
+}
+
+/** The status path this incident takes, with what has happened so far and what comes next. */
+function flowFor(i: Incident, def: FailureTypeDef): { nodes: FlowNode[]; hint: string | null } {
+  const st = i.status;
+  const n = (label: string, state: NodeState): FlowNode => ({ label, state });
+  const nodes: FlowNode[] = [n("Incident created", "done")];
+  let hint: string | null = null;
+
+  if (def.autoRun) {
+    nodes.push(n("Automatic remediation", st === "REMEDIATING" ? "current" : "done"));
+    if (st === "REMEDIATING") {
+      nodes.push(n("Resolved", "pending"));
+      hint = "If the automatic remediation fails, you are asked to escalate and the pipeline owner is emailed.";
+    } else if (!i.remediationFailed) {
+      nodes.push(n("Resolved", "done"));
+    } else {
+      nodes.push(n("Remediation failed", "failed"));
+      nodes.push(n("Escalation required", st === "ESCALATION_REQUIRED" ? "current" : "done"));
+      nodes.push(n("Escalated · mail sent", st === "ESCALATION_REQUIRED" ? "pending" : st === "ESCALATED" ? "current" : "done"));
+      if (st === "RESOLVED") nodes.push(n("Resolved by owner", "done"));
+    }
+  } else if (!def.autoRemediable) {
+    nodes.push(n("Escalation required", st === "ESCALATION_REQUIRED" ? "current" : "done"));
+    nodes.push(n("Escalated · mail sent", st === "ESCALATION_REQUIRED" ? "pending" : st === "ESCALATED" ? "current" : "done"));
+    nodes.push(n("Resolved by owner", st === "RESOLVED" ? "done" : "pending"));
+  } else {
+    nodes.push(n("Waiting for approval", st === "WAITING_APPROVAL" ? "current" : "done"));
+    if (st === "REJECTED") {
+      nodes.push(n("Rejected", "failed"));
+    } else if (st === "WAITING_APPROVAL") {
+      nodes.push(n("Remediating", "pending"), n("Resolved", "pending"));
+      hint = "If the remediation fails, the incident is escalated automatically and the pipeline owner is emailed.";
+    } else {
+      nodes.push(n("Remediating", st === "REMEDIATING" ? "current" : "done"));
+      if (st === "REMEDIATING") {
+        nodes.push(n("Resolved", "pending"));
+        hint = "If the remediation fails, the incident is escalated automatically and the pipeline owner is emailed.";
+      } else if (!i.remediationFailed) {
+        nodes.push(n("Resolved", "done"));
+      } else {
+        nodes.push(n("Remediation failed", "failed"));
+        nodes.push(n("Escalated · mail sent", st === "ESCALATED" ? "current" : st === "RESOLVED" ? "done" : "pending"));
+        if (st === "RESOLVED") nodes.push(n("Resolved by owner", "done"));
+      }
+    }
+  }
+  return { nodes, hint };
+}
+
+const NODE_STYLE: Record<NodeState, string> = {
+  done: "border-success-500/40 bg-success-50 text-success-700",
+  current: "border-accent-500/50 bg-accent-50 text-accent-700 ring-2 ring-accent-500/20",
+  pending: "border-border bg-surface text-text-tertiary",
+  failed: "border-danger-500/40 bg-danger-50 text-danger-700",
+};
+
+function FlowTrail({ incident, def }: { incident: Incident; def: FailureTypeDef }) {
+  const { nodes, hint } = flowFor(incident, def);
+  return (
+    <div className="mb-4">
+      <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-text-tertiary">Remediation flow</p>
+      <ol className="flex flex-wrap items-center gap-1.5" aria-label="Remediation flow">
+        {nodes.map((node, idx) => (
+          <li key={`${node.label}-${idx}`} className="flex items-center gap-1.5">
+            <span className={cn("flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium", NODE_STYLE[node.state])}>
+              {node.state === "current" && <span className="size-1.5 animate-pulse rounded-full bg-accent-500" />}
+              {node.state === "done" && <CheckCircle2 className="size-3" />}
+              {node.state === "failed" && <XCircle className="size-3" />}
+              {node.label}
+            </span>
+            {idx < nodes.length - 1 && <ArrowRight className="size-3 text-text-tertiary" />}
+          </li>
+        ))}
+      </ol>
+      {hint && <p className="mt-2 text-xs text-text-tertiary">{hint}</p>}
+    </div>
   );
 }
 
@@ -161,7 +246,7 @@ export default function IncidentDetailPage() {
     return (
       <EmptyState
         title="Incident not found"
-        description={`No incident matches ID "${decodeURIComponent(params.incidentId)}".`}
+        description={`No incident matches the ID "${decodeURIComponent(params.incidentId)}".`}
         className="py-24"
         action={
           <button onClick={() => router.push("/incidents")} className="text-xs font-medium text-accent-600 hover:text-accent-700">
@@ -176,24 +261,83 @@ export default function IncidentDetailPage() {
   const ctx = { pipeline: incident.pipeline, country: incident.country };
   const emails = notifications.filter((n) => n.incidentId === incident.id);
   const status = incident.status;
+  const failed = incident.remediationFailed;
   const canApprove = status === "WAITING_APPROVAL" && def.autoRemediable && !def.autoRun;
-  const canReject = status === "WAITING_APPROVAL" || status === "ESCALATED";
+  const canReject = canApprove;
+  const mustEscalate = status === "ESCALATION_REQUIRED";
 
-  const remSteps = def.remediationSteps.map((s) => fill(s, ctx));
-  let remDone = 0;
-  let remActive: number | undefined;
-  if (status === "RESOLVED") remDone = remSteps.length;
-  else if (status === "REMEDIATING") {
-    const elapsed = now && incident.remediationStartedAt ? Math.max(0, now - Date.parse(incident.remediationStartedAt)) : 0;
-    remDone = Math.min(remSteps.length - 1, Math.floor((elapsed / REMEDIATION_RUN_MS) * remSteps.length));
-    remActive = remDone;
-  } else if (!def.autoRemediable && incident.emailSent) remDone = remSteps.length;
+  /* ---- remediation checklist ---- */
+  const remTexts = def.remediationSteps.map((s) => fill(s, ctx));
+  const by: "ai" | "person" = "ai";
+  let remItems: { text: string; state: ItemState; by?: "ai" | "person" }[];
 
-  const remState: StepState = status === "RESOLVED" ? "done" : status === "REJECTED" ? "blocked" : "active";
-  const validationState: StepState = status === "RESOLVED" ? "done" : status === "REMEDIATING" ? "active" : status === "REJECTED" ? "blocked" : "pending";
+  if (!def.autoRemediable) {
+    const escalateIdx = remTexts.length - 1;
+    remItems = remTexts.map((text, idx) => {
+      const isEmail = idx === escalateIdx;
+      const sent = status === "ESCALATED" || status === "RESOLVED";
+      return { text, state: isEmail ? (sent ? "done" : "pending") : "done", by: isEmail ? "person" : "ai" };
+    });
+  } else {
+    const failIdx = Math.max(1, remTexts.length - 2);
+    remItems = remTexts.map((text, idx) => {
+      let state: ItemState = "pending";
+      if (status === "RESOLVED" && !failed) state = "done";
+      else if (status === "REMEDIATING") {
+        const elapsed = now && incident.remediationStartedAt ? Math.max(0, now - Date.parse(incident.remediationStartedAt)) : 0;
+        const at = Math.min(remTexts.length - 1, Math.floor((elapsed / REMEDIATION_RUN_MS) * remTexts.length));
+        state = idx < at ? "done" : idx === at ? "active" : "pending";
+      } else if (failed) state = idx < failIdx ? "done" : idx === failIdx ? "failed" : "pending";
+      return { text, state, by };
+    });
+    if (failed) {
+      const sent = status === "ESCALATED" || status === "RESOLVED";
+      remItems.push({ text: "Escalate to the pipeline owner and send the email", state: sent ? "done" : "pending", by: "person" });
+    }
+  }
+
+  const remState: StepState = failed ? "failed" : status === "RESOLVED" ? "done" : status === "REJECTED" ? "blocked" : status === "REMEDIATING" ? "active" : !def.autoRemediable && status !== "ESCALATION_REQUIRED" ? "done" : "active";
+  const validationState: StepState = status === "RESOLVED" && !failed ? "done" : failed ? (status === "RESOLVED" ? "done" : "blocked") : status === "REMEDIATING" ? "active" : status === "REJECTED" ? "blocked" : !def.autoRemediable && status === "RESOLVED" ? "done" : "pending";
+  const remSummary =
+    status === "WAITING_APPROVAL"
+      ? `Waiting for your approval — ${def.remediationLabel.toLowerCase()}`
+      : status === "REMEDIATING"
+        ? def.autoRun
+          ? "Sentinel is remediating automatically"
+          : "Running in Databricks"
+        : status === "FAILED"
+          ? "The remediation failed"
+          : status === "ESCALATION_REQUIRED"
+            ? failed
+              ? "Automatic remediation failed — escalation required"
+              : "AI cannot remediate this — escalation required"
+            : status === "ESCALATED"
+              ? failed
+                ? "The remediation failed — escalated to the pipeline owner"
+                : "Escalated to the pipeline owner"
+              : status === "RESOLVED"
+                ? failed
+                  ? "The remediation failed — fixed by the pipeline owner"
+                  : def.autoRun
+                    ? `Resolved automatically — ${def.remediationLabel.toLowerCase()} completed`
+                    : !def.autoRemediable
+                      ? "Fixed by the pipeline owner"
+                      : `${def.remediationLabel} completed`
+                : "Rejected — no action was taken";
+
   const slaGap = incident.durationMinutes - SLA_BASELINE_MINUTES;
   const scaleMax = Math.max(incident.durationMinutes, SLA_BASELINE_MINUTES) * 1.2;
   const closed = status === "RESOLVED";
+
+  const statusNote: Record<Incident["status"], string> = {
+    WAITING_APPROVAL: "Waiting for your approval. Approve to start the remediation, or reject to close this incident.",
+    REMEDIATING: def.autoRun ? "Sentinel is remediating this automatically. No approval is needed." : "The remediation is running in Databricks.",
+    FAILED: "The remediation failed. The incident is being escalated to the pipeline owner.",
+    ESCALATION_REQUIRED: failed ? "Automatic remediation failed. Escalate this incident by sending the email to the pipeline owner." : "AI cannot remediate this failure. Escalate it by sending the email to the pipeline owner.",
+    ESCALATED: "Escalated. The pipeline owner has been emailed and is working on the fix.",
+    RESOLVED: def.autoRun && !failed ? "Resolved automatically. No approval was needed." : failed ? "Resolved after the pipeline owner fixed the issue." : "This incident is resolved.",
+    REJECTED: "The remediation was rejected, so no action was taken.",
+  };
 
   return (
     <div className="flex flex-col">
@@ -224,7 +368,7 @@ export default function IncidentDetailPage() {
             <Kv label="Status">
               <StatusBadge style={INCIDENT_STATUS_STYLES[status]} pulse={status === "REMEDIATING"} />
             </Kv>
-            <Kv label="Pipeline owner">{incident.owner.name}</Kv>
+            <Kv label="Responsible person">{incident.owner.name}</Kv>
           </div>
 
           <div className="space-y-4 p-5">
@@ -232,11 +376,10 @@ export default function IncidentDetailPage() {
               <p className="text-[11px] font-medium uppercase tracking-wide text-text-tertiary">Error</p>
               <p className="mt-1 text-sm text-text-primary">{def.errorMessage}</p>
             </div>
-            <div className="flex flex-wrap gap-x-10 gap-y-3">
-              <Kv label="Recommended action" mono>
-                {def.recommendation}
-              </Kv>
-              <Kv label="Remediation">{def.remediationLabel}</Kv>
+            <div>
+              <p className="text-[11px] font-medium uppercase tracking-wide text-text-tertiary">Recommended action</p>
+              <p className="mt-1 text-sm font-medium text-text-primary">{def.recommendationText}</p>
+              <p className="mt-0.5 font-mono text-[11px] text-text-tertiary">{def.recommendation}</p>
             </div>
 
             {def.change && (
@@ -261,7 +404,7 @@ export default function IncidentDetailPage() {
                   }}
                 >
                   <ThumbsUp className="size-3.5" />
-                  Approve &amp; remediate
+                  Approve and remediate
                 </Button>
               )}
               {canReject && (
@@ -270,26 +413,19 @@ export default function IncidentDetailPage() {
                   Reject
                 </Button>
               )}
-              <Button variant={canApprove ? "secondary" : "primary"} onClick={() => setModal("email")}>
+              <Button variant={mustEscalate ? "primary" : "secondary"} onClick={() => setModal("email")}>
                 <Mail className="size-3.5" />
-                {incident.emailSent ? "Send another email" : "Send email"}
+                {mustEscalate ? "Escalate and send email" : incident.emailSent ? "Send another email" : "Send email"}
               </Button>
-              <p className="text-xs text-text-tertiary">
-                {status === "WAITING_APPROVAL" && def.autoRemediable && "Human approval is required before the remediation runs."}
-                {status === "WAITING_APPROVAL" && !def.autoRemediable && "No safe automated remediation exists — escalate to the pipeline owner by email."}
-                {status === "ESCALATED" && "Escalated — waiting for the pipeline owner to fix the root cause."}
-                {status === "REMEDIATING" && "Remediation is running in Databricks."}
-                {status === "RESOLVED" && (def.autoRun ? "Resolved automatically — no approval was needed. Send an email if the owner should be informed." : "This incident is resolved.")}
-                {status === "REJECTED" && "Remediation was rejected — no action was taken."}
-              </p>
             </div>
+            <p className="text-xs text-text-tertiary">{statusNote[status]}</p>
           </div>
         </section>
 
         <section className="rounded-xl border border-border bg-surface p-5 shadow-xs" aria-label="Incident workflow">
           <h2 className="mb-4 text-sm font-semibold tracking-tight text-text-primary">Incident workflow</h2>
           <ol>
-            <Step n={1} icon={AlertCircle} title="Incident created" state="done" summary={`Failure detected ${formatDateTime(incident.detectedAt)} UTC on run ${incident.runId}`} defaultOpen last={false}>
+            <Step n={1} icon={AlertCircle} title="Incident created" state="done" summary={`Failure detected on ${formatDateTime(incident.detectedAt)} UTC, run ${incident.runId}`} defaultOpen>
               <div className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3">
                 <Kv label="Incident ID" mono>
                   {incident.id}
@@ -301,7 +437,7 @@ export default function IncidentDetailPage() {
                   {incident.jobId}
                 </Kv>
                 <Kv label="Detected">{formatDateTime(incident.detectedAt)} UTC</Kv>
-                <Kv label="Execution status">{incident.executionStatus}</Kv>
+                <Kv label="Execution status">{incident.executionStatus === "TIMEDOUT" ? "Timed out" : "Failed"}</Kv>
                 <Kv label="Error code" mono>
                   {def.errorCode}
                 </Kv>
@@ -309,9 +445,9 @@ export default function IncidentDetailPage() {
             </Step>
 
             <Step n={2} icon={BrainCircuit} title="AI investigation" state="done" summary={def.rootCause} defaultOpen>
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-text-tertiary">Investigation process</p>
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-text-tertiary">What the AI checked</p>
               <div className="mt-2">
-                <Checklist items={def.analysisSteps} doneCount={def.analysisSteps.length} />
+                <Checklist items={def.analysisSteps.map((text) => ({ text, state: "done" as const }))} />
               </div>
               <p className="mt-4 text-[11px] font-semibold uppercase tracking-wide text-text-tertiary">Findings</p>
               <ul className="mt-2 space-y-1.5">
@@ -328,13 +464,13 @@ export default function IncidentDetailPage() {
               </p>
             </Step>
 
-            <Step n={3} icon={ShieldAlert} title="Failure type identified" state="done" summary={`${def.label} → ${def.recommendation}`} defaultOpen>
+            <Step n={3} icon={ShieldAlert} title="Failure type identified" state="done" summary={`${def.label} — ${def.recommendationText}`} defaultOpen>
               <div className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3">
                 <Kv label="Failure type">{def.label}</Kv>
                 <Kv label="Classification code" mono>
                   {def.key}
                 </Kv>
-                <Kv label="Severity">{incident.severity}</Kv>
+                <Kv label="Severity">{SEVERITY_STYLES[incident.severity].label}</Kv>
                 <Kv label="Guardrail" mono>
                   {guardrailOf(incident)}
                 </Kv>
@@ -347,10 +483,10 @@ export default function IncidentDetailPage() {
               </div>
               <p className="mt-3 text-xs text-text-tertiary">
                 {def.autoRun
-                  ? "This failure type is safe to rerun — Sentinel runs the remediation by itself, with no approval."
+                  ? "This failure type is safe to rerun, so Sentinel remediates it automatically without approval."
                   : def.autoRemediable
-                    ? "This failure type has an approved, reversible remediation — it runs after human approval."
-                    : "This failure type has no safe automated remediation — it is escalated to a human."}
+                    ? "This failure type has an approved, reversible remediation. Sentinel runs it after a person approves."
+                    : "This failure type has no safe automated remediation, so it is escalated to a person."}
               </p>
             </Step>
 
@@ -375,35 +511,37 @@ export default function IncidentDetailPage() {
               </div>
               <p className="mt-2 text-xs text-text-tertiary">
                 {incident.slaStatus === "CRITICAL"
-                  ? `Runtime exceeded the ${SLA_BASELINE_MINUTES}-minute average by ${slaGap} minutes, so this incident is marked critical.`
-                  : `Runtime was ${SLA_BASELINE_MINUTES - incident.durationMinutes} minutes under the ${SLA_BASELINE_MINUTES}-minute average, so the SLA is safe.`}
+                  ? `The run took ${slaGap} minutes longer than the ${SLA_BASELINE_MINUTES}-minute average, so this incident is marked critical.`
+                  : `The run finished ${SLA_BASELINE_MINUTES - incident.durationMinutes} minutes faster than the ${SLA_BASELINE_MINUTES}-minute average, so the SLA is safe.`}
               </p>
             </Step>
 
-            <Step
-              n={5}
-              icon={Wrench}
-              title="Remediation"
-              state={remState}
-              summary={
-                status === "WAITING_APPROVAL"
-                  ? def.autoRemediable
-                    ? `Waiting for approval — ${def.remediationLabel}`
-                    : "Escalation required — no automated action"
-                  : status === "ESCALATED"
-                    ? "Escalated to the pipeline owner"
-                    : status === "REMEDIATING"
-                      ? "Running in Databricks"
-                      : status === "RESOLVED"
-                        ? def.autoRemediable
-                          ? def.autoRun
-                            ? `Auto-remediated — ${def.remediationLabel} completed`
-                            : `${def.remediationLabel} completed`
-                          : "Fixed by the pipeline owner"
-                        : "Rejected — not executed"
-              }
-              defaultOpen
-            >
+            <Step n={5} icon={Wrench} title="Remediation" state={remState} summary={remSummary} defaultOpen>
+              <FlowTrail incident={incident} def={def} />
+
+              {!def.autoRemediable ? (
+                <div className="mb-4 flex gap-2.5 rounded-lg border border-warning-500/30 bg-warning-50 px-3.5 py-3 text-sm text-warning-700">
+                  <UserRound className="mt-0.5 size-4 shrink-0" />
+                  <p>
+                    <span className="font-semibold">AI cannot perform this remediation.</span> {def.aiLimit}
+                  </p>
+                </div>
+              ) : def.autoRun ? (
+                <div className="mb-4 flex gap-2.5 rounded-lg border border-accent-500/25 bg-accent-50 px-3.5 py-3 text-sm text-accent-700">
+                  <Bot className="mt-0.5 size-4 shrink-0" />
+                  <p>
+                    <span className="font-semibold">AI performs this automatically.</span> {def.recommendationText}. No approval is needed — a person is only asked to act if the remediation fails.
+                  </p>
+                </div>
+              ) : (
+                <div className="mb-4 flex gap-2.5 rounded-lg border border-accent-500/25 bg-accent-50 px-3.5 py-3 text-sm text-accent-700">
+                  <Bot className="mt-0.5 size-4 shrink-0" />
+                  <p>
+                    <span className="font-semibold">AI performs this after you approve it.</span> {def.recommendationText}.
+                  </p>
+                </div>
+              )}
+
               <div className="mb-3 grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-4">
                 <Kv label="Approval" mono>
                   {approvalStatus(incident)}
@@ -416,10 +554,15 @@ export default function IncidentDetailPage() {
                   {incident.remediationRunId ?? "—"}
                 </Kv>
               </div>
-              <Checklist items={remSteps} doneCount={remDone} activeIndex={remActive} />
+              <Checklist items={remItems} />
               {def.change && (
                 <p className="mt-3 rounded-lg border border-border bg-surface px-3 py-2 text-xs text-text-secondary">
                   {def.change.label}: <span className="font-medium text-text-primary">{def.change.current}</span> <ArrowRight className="mx-1 inline size-3" /> <span className="font-medium text-text-primary">{def.change.recommended}</span>
+                </p>
+              )}
+              {failed && (
+                <p className="mt-3 rounded-lg border border-danger-500/25 bg-danger-50 px-3 py-2 text-xs text-danger-700">
+                  The rerun did not complete successfully (result state FAILED), so the remediation could not be validated and the incident goes to the pipeline owner.
                 </p>
               )}
             </Step>
@@ -429,29 +572,43 @@ export default function IncidentDetailPage() {
               icon={Rocket}
               title="Validation"
               state={validationState}
-              summary={closed ? "Passed — pipeline recovered" : status === "REMEDIATING" ? "Validating the new run…" : status === "REJECTED" ? "Skipped — remediation rejected" : "Pending remediation"}
+              summary={
+                closed && !failed
+                  ? "Passed — the pipeline recovered"
+                  : closed
+                    ? "Confirmed after the owner's manual fix"
+                    : failed
+                      ? "Not possible — the remediation failed"
+                      : status === "REMEDIATING"
+                        ? "Validating the new run…"
+                        : status === "REJECTED"
+                          ? "Skipped — the remediation was rejected"
+                          : "Waiting for the remediation to finish"
+              }
               defaultOpen={closed || status === "REMEDIATING"}
             >
               <p className="mb-2 text-xs text-text-tertiary">
                 Validation status: <span className="font-mono">{validationStatus(incident)}</span>
               </p>
-              <Checklist items={def.validation} doneCount={closed ? def.validation.length : 0} activeIndex={status === "REMEDIATING" ? 0 : undefined} />
+              <Checklist items={def.validation.map((text) => ({ text, state: closed ? ("done" as const) : status === "REMEDIATING" ? ("active" as const) : ("pending" as const) }))} />
             </Step>
 
             <Step
               n={7}
               icon={Mail}
-              title="Notification & escalation"
-              state={emails.length > 0 ? "done" : "pending"}
-              summary={emails.length > 0 ? `${emails.length} email${emails.length > 1 ? "s" : ""} sent to ${incident.owner.name}` : "No email sent yet"}
-              defaultOpen={emails.length > 0}
+              title="Notification and escalation"
+              state={emails.length > 0 ? "done" : mustEscalate ? "active" : "pending"}
+              summary={emails.length > 0 ? `${emails.length} email${emails.length > 1 ? "s" : ""} sent to ${incident.owner.name}` : mustEscalate ? "Escalation required — send the email to the pipeline owner" : "No email has been sent yet"}
+              defaultOpen={emails.length > 0 || mustEscalate}
             >
               {emails.length === 0 ? (
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                  <p className="text-sm text-text-secondary">The pipeline owner has not been emailed. The email — with reason and solution — is generated automatically.</p>
+                  <p className="text-sm text-text-secondary">
+                    {incident.owner.name} has not been emailed yet. The email, including the reason and the recommended solution, is generated automatically.
+                  </p>
                   <Button size="sm" onClick={() => setModal("email")}>
                     <Mail className="size-3.5" />
-                    Send email
+                    {mustEscalate ? "Escalate and send email" : "Send email"}
                   </Button>
                 </div>
               ) : (
@@ -478,7 +635,7 @@ export default function IncidentDetailPage() {
               icon={FlaskConical}
               title="Regression test suite"
               state={closed ? "done" : "pending"}
-              summary={closed ? `REG-${incident.id} added to the CI/CD suite` : "Added to the CI/CD suite when the incident closes"}
+              summary={closed ? `REG-${incident.id} was added to the CI/CD test suite` : "Added to the CI/CD test suite when the incident is resolved"}
               defaultOpen={closed}
               last
             >
@@ -489,9 +646,9 @@ export default function IncidentDetailPage() {
                   ["Expected behavior", def.regression.expectedBehavior],
                   ["Expected classification", `${def.label} (${def.key})`],
                   ["Expected workflow", def.regression.expectedWorkflow],
-                  ["Expected remediation", `${def.recommendation} — ${def.remediationLabel}`],
-                  ["Expected final state", def.autoRemediable ? (def.autoRun ? "RESOLVED automatically — validation passed" : "RESOLVED — validation passed") : "ESCALATED — resolved by the pipeline owner"],
-                  ["Current state", closed ? `RESOLVED — ${formatDateTime(incident.resolvedAt)} UTC` : status.replaceAll("_", " ")],
+                  ["Expected remediation", `${def.recommendationText} (${def.recommendation})`],
+                  ["Expected final state", def.autoRun ? "Resolved automatically, with validation passed" : def.autoRemediable ? "Resolved, with validation passed" : "Escalated, then resolved by the pipeline owner"],
+                  ["Current state", closed ? `Resolved on ${formatDateTime(incident.resolvedAt)} UTC` : INCIDENT_STATUS_STYLES[status].label],
                 ].map(([label, value]) => (
                   <div key={label} className="grid gap-1 px-3.5 py-2.5 sm:grid-cols-[11rem_1fr]">
                     <p className="text-[11px] font-semibold uppercase tracking-wide text-text-tertiary">{label}</p>
@@ -506,13 +663,13 @@ export default function IncidentDetailPage() {
         <AuditTimeline events={incident.audit} />
       </div>
 
-      <EmailModal incident={incident} open={modal === "email"} onClose={() => setModal(null)} />
+      <EmailModal incident={incident} escalating={mustEscalate} open={modal === "email"} onClose={() => setModal(null)} />
       <RemediationStartedModal info={started} onClose={() => setStarted(null)} />
       <Modal
         open={modal === "reject"}
         onClose={() => setModal(null)}
-        title="Reject remediation"
-        description="No action will be taken on this pipeline. The incident is closed as rejected."
+        title="Reject the remediation"
+        description="No action will be taken on this pipeline, and the incident will be closed as rejected."
         footer={
           <>
             <Button variant="secondary" onClick={() => setModal(null)}>
@@ -531,7 +688,7 @@ export default function IncidentDetailPage() {
         }
       >
         <p className="text-sm text-text-secondary">
-          Reject the recommended <strong className="text-text-primary">{def.remediationLabel}</strong> for <strong className="text-text-primary">{incident.pipeline}</strong>?
+          Do you want to reject the recommended action <strong className="text-text-primary">{def.recommendationText.toLowerCase()}</strong> for <strong className="text-text-primary">{incident.pipeline}</strong>?
         </p>
       </Modal>
     </div>

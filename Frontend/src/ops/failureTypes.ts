@@ -28,6 +28,10 @@ export interface FailureTypeDef {
   index: number;
   label: string;
   recommendation: string;
+  /** The recommended action in plain English. */
+  recommendationText: string;
+  /** Set when AI cannot perform the remediation itself — why a person is needed. */
+  aiLimit?: string;
   remediationLabel: string;
   /** false = no safe automatic action exists; the only path is human escalation (email). */
   autoRemediable: boolean;
@@ -57,6 +61,7 @@ export const FAILURE_TYPES: FailureTypeDef[] = [
     index: 1,
     label: "Transient Infrastructure",
     recommendation: "RERUN_PIPELINE",
+    recommendationText: "Rerun the pipeline",
     remediationLabel: "Rerun",
     autoRemediable: true,
     autoRun: true,
@@ -75,7 +80,7 @@ export const FAILURE_TYPES: FailureTypeDef[] = [
     analysisSteps: ["Read run status and termination code", "Inspect cluster event log", "Compare against last 15 successful runs", "Check for recent deployments or config changes", "Match against known transient signatures"],
     remediationSteps: ["Guardrail check: transient infrastructure failures may be rerun automatically", "Trigger a new run of {pipeline} on a fresh cluster", "Monitor the run until completion", "Validate output row counts against the previous run"],
     validation: ["Rerun completed with result_state SUCCESS", "Output row count within 2% of the previous successful run"],
-    solution: ["Nothing to do — Sentinel reran the pipeline automatically on a fresh cluster and it succeeded.", "If the same failure keeps coming back it will be escalated as a repeated failure.", "No code or data change is needed."],
+    solution: ["Open the failed run and check the cluster event log to confirm that the instance loss was a one-off.", "Rerun {pipeline} on a fresh cluster once the cluster pool is healthy.", "If it keeps failing, review the cluster policy and the spot-instance settings."],
     regression: {
       scenario: "Spot instance lost during a Material Master load",
       expectedBehavior: "Run is classified as transient and rerun automatically — no approval needed",
@@ -87,6 +92,7 @@ export const FAILURE_TYPES: FailureTypeDef[] = [
     index: 2,
     label: "Temporary Execution Failure",
     recommendation: "RERUN_PIPELINE",
+    recommendationText: "Rerun the pipeline",
     remediationLabel: "Rerun",
     autoRemediable: true,
     autoRun: true,
@@ -104,7 +110,7 @@ export const FAILURE_TYPES: FailureTypeDef[] = [
     analysisSteps: ["Read task-level failure details", "Correlate with workspace service health", "Verify the source tables are readable now", "Confirm no data-dependent error pattern"],
     remediationSteps: ["Guardrail check: temporary execution failures may be rerun automatically", "Trigger a new run of {pipeline}", "Monitor until completion", "Validate task outputs"],
     validation: ["Rerun completed with result_state SUCCESS", "All 5 tasks finished without retries"],
-    solution: ["Nothing to do — Sentinel reran the pipeline automatically once the service recovered.", "No action is needed from the pipeline owner unless it fails again."],
+    solution: ["Check the workspace service health page for the time of the failure.", "Rerun {pipeline} once the service is healthy.", "If the rerun fails again, open the task log and look for the failing Delta table read."],
     regression: {
       scenario: "Delta read returns HTTP 503 during a Procurement & Sales load",
       expectedBehavior: "Run is classified as temporary and rerun automatically — no approval needed",
@@ -116,6 +122,7 @@ export const FAILURE_TYPES: FailureTypeDef[] = [
     index: 3,
     label: "Source File Unavailable",
     recommendation: "WAIT_FOR_SOURCE",
+    recommendationText: "Wait for the source file, then run the pipeline",
     remediationLabel: "Wait for source",
     autoRemediable: true,
     autoRun: false,
@@ -145,6 +152,7 @@ export const FAILURE_TYPES: FailureTypeDef[] = [
     index: 4,
     label: "Data Quality Failure",
     recommendation: "QUARANTINE_BAD_DATA",
+    recommendationText: "Quarantine the bad records and continue with the clean data",
     remediationLabel: "Quarantine bad records",
     autoRemediable: true,
     autoRun: false,
@@ -174,6 +182,8 @@ export const FAILURE_TYPES: FailureTypeDef[] = [
     index: 5,
     label: "Repeated Failure",
     recommendation: "ESCALATE_INCIDENT",
+    recommendationText: "Stop retrying and escalate to the pipeline owner",
+    aiLimit: "The pipeline keeps failing for different reasons, so another retry would not help. AI stops the retry loop and hands the problem to a person.",
     remediationLabel: "Stop retry loop / escalate",
     autoRemediable: false,
     autoRun: false,
@@ -203,6 +213,8 @@ export const FAILURE_TYPES: FailureTypeDef[] = [
     index: 6,
     label: "Unknown",
     recommendation: "ESCALATE_INCIDENT",
+    recommendationText: "Escalate to the pipeline owner for investigation",
+    aiLimit: "This error does not match any known failure, so AI cannot choose a safe action. A person must investigate.",
     remediationLabel: "Human investigation",
     autoRemediable: false,
     autoRun: false,
@@ -232,6 +244,7 @@ export const FAILURE_TYPES: FailureTypeDef[] = [
     index: 7,
     label: "Schema Mismatch",
     recommendation: "REFRESH_SCHEMA",
+    recommendationText: "Add the new column, refresh the schema, then rerun",
     remediationLabel: "Refresh schema",
     autoRemediable: true,
     autoRun: false,
@@ -262,6 +275,7 @@ export const FAILURE_TYPES: FailureTypeDef[] = [
     index: 8,
     label: "Permission Failure",
     recommendation: "REQUEST_ACCESS",
+    recommendationText: "Grant the missing access, then rerun",
     remediationLabel: "Request/grant access",
     autoRemediable: true,
     autoRun: false,
@@ -292,6 +306,7 @@ export const FAILURE_TYPES: FailureTypeDef[] = [
     index: 9,
     label: "Resource Exhaustion",
     recommendation: "RETRY_WITH_MORE_RESOURCES",
+    recommendationText: "Increase the compute size, then rerun",
     remediationLabel: "Increase compute",
     autoRemediable: true,
     autoRun: false,
@@ -322,6 +337,7 @@ export const FAILURE_TYPES: FailureTypeDef[] = [
     index: 10,
     label: "Timeout Failure",
     recommendation: "RETRY_WITH_EXTENDED_TIMEOUT",
+    recommendationText: "Extend the timeout, then rerun",
     remediationLabel: "Increase timeout",
     autoRemediable: true,
     autoRun: false,
@@ -352,6 +368,7 @@ export const FAILURE_TYPES: FailureTypeDef[] = [
     index: 11,
     label: "Dependency Failure",
     recommendation: "WAIT_AND_RETRY",
+    recommendationText: "Wait for the upstream pipeline, then rerun",
     remediationLabel: "Wait for dependency",
     autoRemediable: true,
     autoRun: false,
@@ -381,6 +398,7 @@ export const FAILURE_TYPES: FailureTypeDef[] = [
     index: 12,
     label: "SLA Breach",
     recommendation: "PRIORITIZE_RERUN",
+    recommendationText: "Rerun on the high-priority queue",
     remediationLabel: "Priority remediation",
     autoRemediable: true,
     autoRun: false,
@@ -411,6 +429,7 @@ export const FAILURE_TYPES: FailureTypeDef[] = [
     index: 13,
     label: "Data Corruption",
     recommendation: "QUARANTINE_BAD_DATA",
+    recommendationText: "Quarantine the corrupt files and reprocess the rest",
     remediationLabel: "Quarantine/reprocess",
     autoRemediable: true,
     autoRun: false,
@@ -440,6 +459,7 @@ export const FAILURE_TYPES: FailureTypeDef[] = [
     index: 14,
     label: "Configuration Failure",
     recommendation: "FIX_CONFIGURATION",
+    recommendationText: "Correct the job configuration, then rerun",
     remediationLabel: "Correct configuration",
     autoRemediable: true,
     autoRun: false,

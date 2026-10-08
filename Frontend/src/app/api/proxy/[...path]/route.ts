@@ -24,6 +24,8 @@ const DATABRICKS_HOST = process.env.DATABRICKS_HOST;
 const BACKEND_URL = process.env.DATABRICKS_APP_URL;
 const CLIENT_ID = process.env.DATABRICKS_CLIENT_ID;
 const CLIENT_SECRET = process.env.DATABRICKS_CLIENT_SECRET;
+// Optional: a personal access / OAuth token, handy for local development instead of a service principal.
+const STATIC_TOKEN = process.env.DATABRICKS_TOKEN;
 
 console.log("[proxy] config check:", {
   DATABRICKS_HOST: DATABRICKS_HOST ?? "(missing)",
@@ -36,6 +38,7 @@ console.log("[proxy] config check:", {
 let cachedToken: { value: string; expiresAt: number } | null = null;
 
 async function getAccessToken(): Promise<string> {
+  if (STATIC_TOKEN) return STATIC_TOKEN;
   if (cachedToken && cachedToken.expiresAt > Date.now() + 30_000) {
     return cachedToken.value;
   }
@@ -65,9 +68,9 @@ async function forward(req: NextRequest, path: string[]): Promise<NextResponse> 
     return NextResponse.json({ success: false, error: "Not found." }, { status: 404 });
   }
 
-  if (!DATABRICKS_HOST || !BACKEND_URL || !CLIENT_ID || !CLIENT_SECRET) {
+  if (!BACKEND_URL || (!STATIC_TOKEN && (!DATABRICKS_HOST || !CLIENT_ID || !CLIENT_SECRET))) {
     return NextResponse.json(
-      { success: false, error: "Backend proxy is not configured (DATABRICKS_HOST / DATABRICKS_APP_URL / DATABRICKS_CLIENT_ID / DATABRICKS_CLIENT_SECRET missing)." },
+      { success: false, error: "Backend proxy is not configured (set DATABRICKS_APP_URL plus either DATABRICKS_TOKEN, or DATABRICKS_HOST / DATABRICKS_CLIENT_ID / DATABRICKS_CLIENT_SECRET)." },
       { status: 503 },
     );
   }
@@ -100,6 +103,10 @@ async function forward(req: NextRequest, path: string[]): Promise<NextResponse> 
   }
 
   const body = await upstream.text();
+  // A stopped Databricks App answers with an HTML "App Not Available" page — report that as an unreachable assistant.
+  if (upstream.status >= 500 && (upstream.headers.get("Content-Type") ?? "").includes("text/html")) {
+    return NextResponse.json({ success: false, error: "The assistant service is not running." }, { status: 502 });
+  }
   return new NextResponse(body, {
     status: upstream.status,
     headers: { "Content-Type": upstream.headers.get("Content-Type") ?? "application/json" },

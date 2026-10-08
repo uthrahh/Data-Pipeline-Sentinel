@@ -9,17 +9,17 @@ import { EmptyState } from "@/components/common/EmptyState";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { KpiCard } from "@/components/dashboard/KpiCard";
 import { FAILURE_BY_KEY } from "@/ops/failureTypes";
-import { SLA_BASELINE_MINUTES, TODAY, WORKSPACE_BY_ID, inWorkspace } from "@/ops/catalog";
+import { SLA_BASELINE_MINUTES, WORKSPACE_BY_ID, inWorkspace } from "@/ops/catalog";
 import { isActive } from "@/ops/derive";
 import { useOps } from "@/ops/store";
 import { EXECUTION_STATUS_STYLES, INCIDENT_STATUS_STYLES, SEVERITY_STYLES, SLA_STYLES } from "@/ops/styles";
 import { formatDate, formatDateTime, formatDuration, formatNumber, formatPercent } from "@/lib/utils";
 
 export default function OverviewPage() {
-  const { runs, incidents, workspace } = useOps();
+  const { runs, incidents, workspace, today } = useOps();
 
   const view = useMemo(() => {
-    const todayRuns = runs.filter((r) => r.date === TODAY && inWorkspace(r.pipelineId, workspace));
+    const todayRuns = runs.filter((r) => r.date === today && inWorkspace(r.pipelineId, workspace));
     const failed = todayRuns.filter((r) => r.executionStatus !== "SUCCESS").length;
     const active = incidents.filter((i) => isActive(i) && inWorkspace(i.pipelineId, workspace));
     return {
@@ -31,24 +31,21 @@ export default function OverviewPage() {
       attention: [...active].sort((a, b) => (a.detectedAt < b.detectedAt ? 1 : -1)).slice(0, 5),
       recent: [...todayRuns].sort((a, b) => (a.startTime < b.startTime ? 1 : -1)).slice(0, 5),
     };
-  }, [runs, incidents, workspace]);
+  }, [runs, incidents, workspace, today]);
 
   const incidentById = useMemo(() => new Map(incidents.map((i) => [i.id, i])), [incidents]);
 
   return (
     <div className="flex flex-col">
-      <PageHeader
-        title="Pipeline Overview"
-        description={`${WORKSPACE_BY_ID[workspace].name} · ${formatDate(`${TODAY}T00:00:00Z`)} (UTC)`}
-      />
+      <PageHeader title="Pipeline Overview" description={`${WORKSPACE_BY_ID[workspace].name} · ${formatDate(`${today}T00:00:00Z`)} (UTC)`} />
 
       <div className="flex flex-col gap-5 p-4 sm:p-6">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
           <KpiCard label="Total Pipeline Runs" value={formatNumber(view.total)} supportingText="runs today" icon={Activity} accent="accent" />
-          <KpiCard label="Failed Pipeline Runs" value={formatNumber(view.failed)} deltaIsGood={false} supportingText="runs today" icon={AlertOctagon} accent="danger" />
-          <KpiCard label="Pipeline Success Rate" value={formatPercent(view.successRate)} supportingText={`${view.total - view.failed} of ${view.total} succeeded`} icon={CheckCircle2} accent="success" />
-          <KpiCard label="Max Pipeline Run Duration" value={formatDuration(view.maxDuration)} supportingText={`SLA baseline ${SLA_BASELINE_MINUTES} min`} icon={Timer} accent="neutral" />
-          <KpiCard label="Active Incidents" value={formatNumber(view.active)} supportingText="open across all days" icon={Siren} accent="danger" />
+          <KpiCard label="Failed Pipeline Runs" value={formatNumber(view.failed)} deltaIsGood={false} supportingText="failed runs today" icon={AlertOctagon} accent="danger" />
+          <KpiCard label="Pipeline Success Rate" value={formatPercent(view.successRate)} supportingText={`${view.total - view.failed} of ${view.total} runs succeeded`} icon={CheckCircle2} accent="success" />
+          <KpiCard label="Max Pipeline Run Duration" value={formatDuration(view.maxDuration)} supportingText={`SLA baseline: ${SLA_BASELINE_MINUTES} min`} icon={Timer} accent="neutral" />
+          <KpiCard label="Active Incidents" value={formatNumber(view.active)} supportingText="open, across all days" icon={Siren} accent="danger" />
         </div>
 
         <Card>
@@ -76,7 +73,7 @@ export default function OverviewPage() {
                     </div>
                     <div className="flex items-center gap-2">
                       <StatusBadge style={SEVERITY_STYLES[i.severity]} />
-                      <StatusBadge style={INCIDENT_STATUS_STYLES[i.status]} />
+                      <StatusBadge style={INCIDENT_STATUS_STYLES[i.status]} pulse={i.status === "REMEDIATING"} />
                     </div>
                   </Link>
                 </li>
@@ -96,7 +93,7 @@ export default function OverviewPage() {
             }
           />
           {view.recent.length === 0 ? (
-            <EmptyState title="No pipeline runs" description="There are no runs for the selected workspace today." />
+            <EmptyState title="No pipeline runs" description="There are no runs today for the selected workspace." />
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[720px] border-collapse text-left text-xs">

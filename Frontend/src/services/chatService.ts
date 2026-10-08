@@ -28,10 +28,10 @@ class GenieChatService implements ChatService {
       const res = await apiClient.post<ChatEnvelope>("/api/chat", { message: content });
       text = res.data.message;
     } catch (e) {
-      text =
-        e instanceof ApiError && e.status === 503
-          ? "Genie isn't connected in this environment yet."
-          : "Genie couldn't answer that right now. Please try again in a moment.";
+      if (e instanceof ApiError && e.status === 503) text = "Genie is not connected in this environment yet.";
+      else if (e instanceof ApiError && (e.status === 502 || e.status === 504)) text = "Genie is not reachable right now. The assistant service may be stopped or restarting — please try again in a minute.";
+      else if (e instanceof DOMException && (e.name === "TimeoutError" || e.name === "AbortError")) text = "Genie took too long to answer. Please try again with a shorter question.";
+      else text = "Genie could not answer that right now. Please try again.";
     }
     return {
       toolCalls,

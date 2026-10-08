@@ -47,15 +47,15 @@ export default function NotificationsPage() {
     <div className="flex flex-col">
       <PageHeader
         title="Notifications"
-        description={`${WORKSPACE_BY_ID[workspace].name} — every email and escalation sent for incidents over the last 7 days.`}
+        description={`${WORKSPACE_BY_ID[workspace].name} — emails and escalations sent in the last 7 days. Each one is linked to its incident.`}
       />
 
       <div className="flex flex-col gap-5 p-4 sm:p-6">
         <div className="grid grid-cols-3 gap-3">
           {[
-            { label: "Sent (7 days)", value: scoped.length },
+            { label: "Sent in the last 7 days", value: scoped.length },
             { label: "Escalations", value: escalations },
-            { label: "Emails", value: scoped.length - escalations },
+            { label: "Other emails", value: scoped.length - escalations },
           ].map((c) => (
             <div key={c.label} className="rounded-xl border border-border bg-surface px-4 py-3">
               <p className="text-[11px] font-semibold uppercase tracking-wide text-text-tertiary">{c.label}</p>
@@ -91,7 +91,7 @@ export default function NotificationsPage() {
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search incident, subject or person"
+                placeholder="Search by incident, subject or person"
                 aria-label="Search notifications"
                 className="w-56 bg-transparent text-xs text-text-primary outline-none placeholder:text-text-tertiary"
               />
@@ -99,7 +99,7 @@ export default function NotificationsPage() {
           </div>
 
           {filtered.length === 0 ? (
-            <EmptyState title="No notifications match" description="Try a different type or failure type." />
+            <EmptyState title="No notifications match" description="Try a different type or failure type filter." />
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[1100px] border-collapse text-left text-xs">
@@ -112,7 +112,7 @@ export default function NotificationsPage() {
                     <th className="px-4 py-2.5">Failure Type</th>
                     <th className="px-4 py-2.5">Pipeline Name</th>
                     <th className="px-4 py-2.5">Type</th>
-                    <th className="px-4 py-2.5">Sent</th>
+                    <th className="px-4 py-2.5">Sent (UTC)</th>
                   </tr>
                 </thead>
                 <tbody>
