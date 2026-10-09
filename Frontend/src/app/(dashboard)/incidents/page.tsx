@@ -68,7 +68,7 @@ export default function IncidentsPage() {
     <div className="flex flex-col">
       <PageHeader
         title="Incidents"
-        description={`${WORKSPACE_BY_ID[workspace].name} — every pipeline incident from the last 15 days, from creation through AI investigation to remediation.`}
+        description={`${WORKSPACE_BY_ID[workspace].name} · Incidents detected in the last 15 days, tracked from detection through investigation to remediation.`}
       />
 
       <div className="flex flex-col gap-5 p-4 sm:p-6">

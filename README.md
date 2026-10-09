@@ -14,11 +14,10 @@
 | Page | What it shows |
 |---|---|
 | **Overview** | Today's KPIs (runs, failures, success rate, max duration, active incidents), the 5 newest open incidents, and the 5 most recent runs. A **workspace switcher** (All Workspaces / Procurement DE / Sales DE) re-scopes every page. |
-| **Pipelines** | All 40 runs for each of the last 15 days (the window always ends on the current date), picked from a calendar, as a table with the responsible person, incident status, approval/remediation/validation status, SLA, guardrail and the recommended action in plain English. Filter by status, failure type, or search. |
+| **Pipelines** | All 40 runs for each of the last 15 days (the window always ends on the current date), chosen with a compact date-range picker (a single day by default), as a table with the responsible person, incident status, approval/remediation/validation status, SLA, guardrail and the recommended action in plain English. Filter by status, failure type, or search. |
 | **Incidents** | Every incident from the last 15 days (24 active) plus the failure scenario / remediation playbook. Each incident opens an 8-step workflow: created → AI investigation → failure type → SLA → remediation → validation → notification → regression test, followed by the audit history. |
 | **Notifications** | Every email and escalation sent in the last 7 days (incident, subject, reason, person, failure type, pipeline); open one to see the full email and resolution. |
 | **Data Validation** | The 7 `ai_dataops_poc.sap_demo` tables, grouped as source and resulting tables. Expand a table to run each of the 10 data quality checks (or all at once). |
-| **Analytics** | Daily run volume, incidents by failure type, and a pipeline health calendar (15 days) — all computed from the same data as the other pages. |
 | **Genie** (chat button) | Live — `POST /api/chat` on the Databricks-hosted assistant. |
 
 ### How the incident workflow behaves
@@ -57,7 +56,7 @@ Frontend/src/
   ops/         The static data model: pipelines, 14 failure types, runs, incidents,
                notifications, validation checks, and the in-memory store (workspace,
                approve/reject/email actions)
-  app/         Routes: /overview /pipelines /incidents /notifications /data-validation /analytics
+  app/         Routes: /overview /pipelines /incidents /notifications /data-validation
   components/  Layout (sidebar, workspace switcher), common UI, chat (Genie), incident modals
   services/    chatService.ts — the one live call (Genie)
 Backend/       Legacy FastAPI service — not used by this branch

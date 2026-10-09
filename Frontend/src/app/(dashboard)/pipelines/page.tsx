@@ -9,7 +9,7 @@ import { EmptyState } from "@/components/common/EmptyState";
 import { PIPELINE_BY_ID, WORKSPACE_BY_ID, inWorkspace } from "@/ops/catalog";
 import { approvalStatus, guardrailDecision, guardrailOf, overallStatus, remediationStatus, validationStatus } from "@/ops/derive";
 import { FAILURE_BY_KEY, FAILURE_TYPES, type FailureKey } from "@/ops/failureTypes";
-import { DayCalendar } from "@/components/pipeline/DayCalendar";
+import { DateRangePicker, type DateRange } from "@/components/pipeline/DateRangePicker";
 import { useOps } from "@/ops/store";
 import { DQ_STYLES, EXECUTION_STATUS_STYLES, INCIDENT_STATUS_STYLES, SLA_STYLES } from "@/ops/styles";
 import type { Incident, PipelineRun } from "@/ops/types";
@@ -84,9 +84,13 @@ function dayLabel(day: string): string {
   return new Date(`${day}T00:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
 }
 
+function rangeLabel({ from, to }: DateRange): string {
+  return from === to ? dayLabel(from) : `${dayLabel(from)} – ${dayLabel(to)}`;
+}
+
 export default function PipelinesPage() {
   const { runs, incidents, workspace, days, today } = useOps();
-  const [day, setDay] = useState<string>(today);
+  const [range, setRange] = useState<DateRange>({ from: today, to: today });
   const [status, setStatus] = useState<StatusFilter>("ALL");
   const [failure, setFailure] = useState<FailureKey | "ALL">("ALL");
   const [query, setQuery] = useState("");
@@ -94,18 +98,7 @@ export default function PipelinesPage() {
   const incidentById = useMemo(() => new Map(incidents.map((i) => [i.id, i])), [incidents]);
   const scoped = useMemo(() => runs.filter((r) => inWorkspace(r.pipelineId, workspace)), [runs, workspace]);
 
-  const perDay = useMemo(() => {
-    const map = new Map<string, { total: number; failed: number }>();
-    for (const r of scoped) {
-      const b = map.get(r.date) ?? { total: 0, failed: 0 };
-      b.total += 1;
-      if (r.executionStatus !== "SUCCESS") b.failed += 1;
-      map.set(r.date, b);
-    }
-    return map;
-  }, [scoped]);
-
-  const dayRuns = useMemo(() => scoped.filter((r) => r.date === day), [scoped, day]);
+  const dayRuns = useMemo(() => scoped.filter((r) => r.date >= range.from && r.date <= range.to), [scoped, range]);
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -135,9 +128,8 @@ export default function PipelinesPage() {
       <PageHeader title="Pipeline Runs" description={`${WORKSPACE_BY_ID[workspace].name} — every pipeline run for the last ${days.length} days, with its incident, SLA and remediation status.`} />
 
       <div className="flex flex-col gap-4 p-4 sm:p-6">
-        <DayCalendar days={days} today={today} selected={day} onSelect={setDay} summary={(d) => perDay.get(d)} />
-
         <div className="flex flex-wrap items-center gap-3">
+          <DateRangePicker days={days} today={today} value={range} onChange={setRange} />
           <div className="flex items-center gap-4 text-xs text-text-secondary">
             <span>
               <strong className="text-text-primary">{stats.total}</strong> runs
@@ -192,9 +184,9 @@ export default function PipelinesPage() {
 
         <div className="overflow-hidden rounded-xl border border-border bg-surface">
           {rows.length === 0 ? (
-            <EmptyState title="No runs match" description="Try a different day, status or failure type." />
+            <EmptyState title="No runs match" description="Try a different date range, status or failure type." />
           ) : (
-            <div className="max-h-[calc(100dvh-340px)] min-h-64 overflow-auto">
+            <div className="max-h-[calc(100dvh-280px)] min-h-64 overflow-auto">
               <table className="w-max min-w-full border-collapse text-left text-xs">
                 <thead className="sticky top-0 z-20">
                   <tr className="border-b border-border bg-surface-subtle">
@@ -230,7 +222,7 @@ export default function PipelinesPage() {
           )}
         </div>
         <p className="text-[11px] text-text-tertiary">
-          Showing {rows.length} of {stats.total} runs for {dayLabel(day)}. All times are in UTC.
+          Showing {rows.length} of {stats.total} runs for {rangeLabel(range)}. All times are in UTC.
         </p>
       </div>
     </div>
