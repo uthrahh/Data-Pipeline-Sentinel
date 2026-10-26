@@ -7,7 +7,7 @@ import { PageHeader } from "@/components/common/PageHeader";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { EmptyState } from "@/components/common/EmptyState";
 import { PIPELINE_BY_ID, WORKSPACE_BY_ID, inWorkspace } from "@/ops/catalog";
-import { approvalStatus, guardrailDecision, guardrailOf, overallStatus, remediationStatus, validationStatus } from "@/ops/derive";
+import { approvalStatus, overallStatus, remediationStatus, validationStatus } from "@/ops/derive";
 import { FAILURE_BY_KEY, FAILURE_TYPES, type FailureKey } from "@/ops/failureTypes";
 import { DateRangePicker, type DateRange } from "@/components/pipeline/DateRangePicker";
 import { useOps } from "@/ops/store";
@@ -75,8 +75,6 @@ const COLUMNS: Column[] = [
   { label: "Validation Status", render: (_, i) => (i ? mono(validationStatus(i)) : dash) },
   { label: "Issue Type", render: (_, i) => (i ? <span className="font-medium text-text-primary">{FAILURE_BY_KEY[i.failureKey].label}</span> : dash) },
   { label: "Criticality", render: (_, i) => (i ? mono(i.severity) : dash) },
-  { label: "Guardrail ID", render: (_, i) => (i ? mono(guardrailOf(i)) : dash) },
-  { label: "Guardrail Decision", render: (_, i) => (i ? mono(guardrailDecision(i)) : dash) },
   { label: "Overall Status", render: (r, i) => mono(overallStatus(r, i)) },
 ];
 
