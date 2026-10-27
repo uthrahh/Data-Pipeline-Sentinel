@@ -14,7 +14,7 @@ export function ChatQueryResultTable({ result }: { result: ChatQueryResult }) {
           <thead>
             <tr className="bg-surface-muted text-text-tertiary">
               {result.columns.map((col) => (
-                <th key={col} className="whitespace-nowrap px-2.5 py-1.5 font-semibold uppercase tracking-wide">
+                <th key={col} className="whitespace-nowrap px-2.5 py-1.5 font-medium">
                   {col}
                 </th>
               ))}

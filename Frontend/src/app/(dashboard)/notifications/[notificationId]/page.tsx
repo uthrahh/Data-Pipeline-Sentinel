@@ -15,7 +15,7 @@ import { formatDateTime } from "@/lib/utils";
 function Kv({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="min-w-0">
-      <p className="text-[11px] font-medium uppercase tracking-wide text-text-tertiary">{label}</p>
+      <p className="text-[11px] font-medium text-text-tertiary">{label}</p>
       <p className="mt-1 break-words text-sm font-medium text-text-primary">{children}</p>
     </div>
   );
@@ -59,7 +59,7 @@ export default function NotificationDetailPage() {
         }
       />
 
-      <div className="mx-auto w-full max-w-4xl space-y-5 p-4 sm:p-6">
+      <div className="mx-auto w-full max-w-4xl space-y-5 p-4 sm:px-8 sm:pb-10 sm:pt-6">
         <div className="rounded-xl border border-border bg-surface p-5">
           <div className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3">
             <Kv label="Incident">
@@ -83,7 +83,7 @@ export default function NotificationDetailPage() {
           <CardHeader title="Subject" />
           <CardBody>
             <p className="text-sm font-medium text-text-primary">{n.subject}</p>
-            <p className="mt-3 text-[11px] font-medium uppercase tracking-wide text-text-tertiary">Reason</p>
+            <p className="mt-3 text-[11px] font-medium text-text-tertiary">Reason</p>
             <p className="mt-1 text-sm text-text-secondary">{n.reason}</p>
           </CardBody>
         </Card>

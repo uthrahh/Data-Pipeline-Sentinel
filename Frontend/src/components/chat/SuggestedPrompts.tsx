@@ -3,7 +3,7 @@ import { SUGGESTED_PROMPTS } from "@/data/chatPrompts";
 export function SuggestedPrompts({ onSelect }: { onSelect: (prompt: string) => void }) {
   return (
     <div className="flex flex-col gap-1.5">
-      <p className="px-0.5 text-[11px] font-semibold uppercase tracking-wide text-text-tertiary">Try asking</p>
+      <p className="px-0.5 text-[11px] font-medium text-text-tertiary">Try asking</p>
       {SUGGESTED_PROMPTS.map((prompt) => (
         <button
           key={prompt}

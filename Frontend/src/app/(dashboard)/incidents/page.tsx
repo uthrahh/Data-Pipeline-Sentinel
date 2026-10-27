@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Mail, Search } from "lucide-react";
 import { PageHeader } from "@/components/common/PageHeader";
+import { Segmented } from "@/components/common/Segmented";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { EmptyState } from "@/components/common/EmptyState";
 import { Card, CardHeader } from "@/components/common/Card";
@@ -71,7 +72,7 @@ export default function IncidentsPage() {
         description={`${WORKSPACE_BY_ID[workspace].name} · Incidents detected in the last 15 days, tracked from detection through investigation to remediation.`}
       />
 
-      <div className="flex flex-col gap-5 p-4 sm:p-6">
+      <div className="flex flex-col gap-5 p-4 sm:px-8 sm:pb-10 sm:pt-6">
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
           {[
             { label: "All incidents", value: counts.total },
@@ -80,29 +81,24 @@ export default function IncidentsPage() {
             { label: "Critical and active", value: counts.critical },
             { label: "Resolved", value: counts.resolved },
           ].map((c) => (
-            <div key={c.label} className="rounded-xl border border-border bg-surface px-4 py-3">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-text-tertiary">{c.label}</p>
-              <p className="mt-1 text-2xl font-semibold tracking-tight text-text-primary">{c.value}</p>
+            <div key={c.label} data-spotlight className="rounded-xl border border-border bg-surface px-4 py-3.5 shadow-xs">
+              <p className="text-[11px] font-medium text-text-tertiary">{c.label}</p>
+              <p className="mt-1.5 text-[26px] font-semibold leading-none tracking-[-0.04em] text-text-primary num">{c.value}</p>
             </div>
           ))}
         </div>
 
         <div className="overflow-hidden rounded-xl border border-border bg-surface">
           <div className="flex flex-wrap items-center gap-2 border-b border-border px-4 py-3">
-            <div className="flex flex-wrap overflow-hidden rounded-lg border border-border-strong text-xs font-medium">
-              {STATUS_OPTIONS.map((o) => (
-                <button
-                  key={o.value}
-                  onClick={() => {
-                    setStatus(o.value);
-                    setPage(1);
-                  }}
-                  className={cn("px-3 py-1.5 transition-colors", status === o.value ? "bg-navy-950 text-white" : "bg-surface text-text-secondary hover:bg-surface-muted")}
-                >
-                  {o.label}
-                </button>
-              ))}
-            </div>
+            <Segmented
+              label="Filter by status"
+              value={status}
+              options={STATUS_OPTIONS}
+              onChange={(v) => {
+                setStatus(v);
+                setPage(1);
+              }}
+            />
             <select
               value={failure}
               onChange={(e) => {
@@ -140,7 +136,7 @@ export default function IncidentsPage() {
             <div className="overflow-x-auto">
               <table className="w-full min-w-[1100px] border-collapse text-left text-xs">
                 <thead>
-                  <tr className="border-b border-border bg-surface-subtle text-[11px] font-semibold uppercase tracking-wide text-text-tertiary">
+                  <tr className="border-b border-border bg-surface-subtle text-[11px] font-medium text-text-tertiary">
                     <th className="px-4 py-2.5">Incident</th>
                     <th className="px-4 py-2.5">Pipeline</th>
                     <th className="px-4 py-2.5">Failure Type</th>
@@ -218,7 +214,7 @@ export default function IncidentsPage() {
           <div className="overflow-x-auto">
             <table className="w-full min-w-[820px] border-collapse text-left text-xs">
               <thead>
-                <tr className="border-b border-border bg-surface-subtle text-[11px] font-semibold uppercase tracking-wide text-text-tertiary">
+                <tr className="border-b border-border bg-surface-subtle text-[11px] font-medium text-text-tertiary">
                   <th className="px-5 py-2.5">#</th>
                   <th className="px-4 py-2.5">Failure Type</th>
                   <th className="px-4 py-2.5">Example Pipeline</th>

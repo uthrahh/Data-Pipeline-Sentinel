@@ -33,7 +33,7 @@ export function Modal({ open, onClose, title, description, children, footer, siz
 
   return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-navy-950/50 px-4 animate-fade-in"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 backdrop-blur-sm animate-fade-in"
       role="dialog"
       aria-modal="true"
       aria-labelledby="modal-title"
@@ -41,7 +41,7 @@ export function Modal({ open, onClose, title, description, children, footer, siz
     >
       <div
         className={cn(
-          "w-full rounded-2xl border border-border bg-surface shadow-lg animate-scale-in",
+          "w-full rounded-2xl border border-border-strong bg-surface shadow-lg animate-scale-in",
           size === "sm" ? "max-w-md" : "max-w-xl",
         )}
         onClick={(e) => e.stopPropagation()}

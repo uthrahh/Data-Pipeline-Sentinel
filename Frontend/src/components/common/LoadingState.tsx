@@ -26,7 +26,7 @@ export function LoadingState({ label = "Loading…", className }: { label?: stri
 }
 
 export function SkeletonLine({ className }: { className?: string }) {
-  return <div className={cn("animate-pulse rounded bg-surface-muted", className)} />;
+  return <div className={cn("skeleton rounded", className)} />;
 }
 
 export function KpiCardSkeleton() {

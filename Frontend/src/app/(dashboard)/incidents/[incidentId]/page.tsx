@@ -49,7 +49,7 @@ const REMEDIATION_RUN_MS = 7000;
 function Kv({ label, children, mono }: { label: string; children: ReactNode; mono?: boolean }) {
   return (
     <div className="min-w-0">
-      <p className="text-[11px] font-medium uppercase tracking-wide text-text-tertiary">{label}</p>
+      <p className="text-[11px] font-medium text-text-tertiary">{label}</p>
       <p className={cn("mt-1 break-words text-sm font-medium text-text-primary", mono && "font-mono text-xs")}>{children}</p>
     </div>
   );
@@ -204,7 +204,7 @@ function FlowTrail({ incident, def }: { incident: Incident; def: FailureTypeDef 
   const { nodes, hint } = flowFor(incident, def);
   return (
     <div className="mb-4">
-      <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-text-tertiary">Remediation flow</p>
+      <p className="mb-2 text-[11px] font-medium text-text-tertiary">Remediation flow</p>
       <ol className="flex flex-wrap items-center gap-1.5" aria-label="Remediation flow">
         {nodes.map((node, idx) => (
           <li key={`${node.label}-${idx}`} className="flex items-center gap-1.5">
@@ -356,7 +356,7 @@ export default function IncidentDetailPage() {
         }
       />
 
-      <div className="mx-auto w-full max-w-5xl space-y-5 p-4 sm:p-6">
+      <div className="mx-auto w-full max-w-5xl space-y-5 p-4 sm:px-8 sm:pb-10 sm:pt-6">
         <section className="overflow-hidden rounded-xl border border-border bg-surface shadow-xs" aria-label="Incident summary">
           <div className="grid grid-cols-2 gap-x-6 gap-y-4 border-b border-border p-5 sm:grid-cols-3">
             <Kv label="Pipeline">{incident.pipeline}</Kv>
@@ -373,11 +373,11 @@ export default function IncidentDetailPage() {
 
           <div className="space-y-4 p-5">
             <div>
-              <p className="text-[11px] font-medium uppercase tracking-wide text-text-tertiary">Error</p>
+              <p className="text-[11px] font-medium text-text-tertiary">Error</p>
               <p className="mt-1 text-sm text-text-primary">{def.errorMessage}</p>
             </div>
             <div>
-              <p className="text-[11px] font-medium uppercase tracking-wide text-text-tertiary">Recommended action</p>
+              <p className="text-[11px] font-medium text-text-tertiary">Recommended action</p>
               <p className="mt-1 text-sm font-medium text-text-primary">{def.recommendationText}</p>
               <p className="mt-0.5 font-mono text-[11px] text-text-tertiary">{def.recommendation}</p>
             </div>
@@ -385,11 +385,11 @@ export default function IncidentDetailPage() {
             {def.change && (
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="rounded-lg border border-border bg-surface-subtle px-4 py-3">
-                  <p className="text-[11px] font-medium uppercase tracking-wide text-text-tertiary">Current {def.change.label}</p>
+                  <p className="text-[11px] font-medium text-text-tertiary">Current {def.change.label}</p>
                   <p className="mt-1 text-sm font-medium text-text-primary">{def.change.current}</p>
                 </div>
                 <div className="rounded-lg border border-success-500/30 bg-success-50 px-4 py-3">
-                  <p className="text-[11px] font-medium uppercase tracking-wide text-success-700">Recommended {def.change.label}</p>
+                  <p className="text-[11px] font-medium text-success-700">Recommended {def.change.label}</p>
                   <p className="mt-1 text-sm font-medium text-text-primary">{def.change.recommended}</p>
                 </div>
               </div>
@@ -445,11 +445,11 @@ export default function IncidentDetailPage() {
             </Step>
 
             <Step n={2} icon={BrainCircuit} title="AI investigation" state="done" summary={def.rootCause} defaultOpen>
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-text-tertiary">What the AI checked</p>
+              <p className="text-[11px] font-medium text-text-tertiary">What the AI checked</p>
               <div className="mt-2">
                 <Checklist items={def.analysisSteps.map((text) => ({ text, state: "done" as const }))} />
               </div>
-              <p className="mt-4 text-[11px] font-semibold uppercase tracking-wide text-text-tertiary">Findings</p>
+              <p className="mt-4 text-[11px] font-medium text-text-tertiary">Findings</p>
               <ul className="mt-2 space-y-1.5">
                 {def.investigation.map((f, idx) => (
                   <li key={idx} className="flex gap-2 text-sm text-text-secondary">
@@ -651,7 +651,7 @@ export default function IncidentDetailPage() {
                   ["Current state", closed ? `Resolved on ${formatDateTime(incident.resolvedAt)} UTC` : INCIDENT_STATUS_STYLES[status].label],
                 ].map(([label, value]) => (
                   <div key={label} className="grid gap-1 px-3.5 py-2.5 sm:grid-cols-[11rem_1fr]">
-                    <p className="text-[11px] font-semibold uppercase tracking-wide text-text-tertiary">{label}</p>
+                    <p className="text-[11px] font-medium text-text-tertiary">{label}</p>
                     <p className="text-sm text-text-primary">{value}</p>
                   </div>
                 ))}

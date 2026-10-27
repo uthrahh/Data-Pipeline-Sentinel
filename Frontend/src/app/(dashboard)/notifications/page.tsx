@@ -4,13 +4,14 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
 import { PageHeader } from "@/components/common/PageHeader";
+import { Segmented } from "@/components/common/Segmented";
 import { EmptyState } from "@/components/common/EmptyState";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { toneStyle } from "@/lib/constants";
 import { NOTIFICATION_DAYS, WORKSPACE_BY_ID, PIPELINE_BY_NAME, inWorkspace } from "@/ops/catalog";
 import { FAILURE_BY_KEY, FAILURE_TYPES, type FailureKey } from "@/ops/failureTypes";
 import { useOps } from "@/ops/store";
-import { cn, formatDateTime } from "@/lib/utils";
+import { formatDateTime } from "@/lib/utils";
 
 type Kind = "ALL" | "Email" | "Escalation";
 
@@ -53,29 +54,32 @@ export default function NotificationsPage() {
         description={`${WORKSPACE_BY_ID[workspace].name} — emails and escalations sent in the last 7 days. Each one is linked to its incident.`}
       />
 
-      <div className="flex flex-col gap-5 p-4 sm:p-6">
+      <div className="flex flex-col gap-5 p-4 sm:px-8 sm:pb-10 sm:pt-6">
         <div className="grid grid-cols-3 gap-3">
           {[
             { label: "Sent in the last 7 days", value: scoped.length },
             { label: "Escalations", value: escalations },
             { label: "Other emails", value: scoped.length - escalations },
           ].map((c) => (
-            <div key={c.label} className="rounded-xl border border-border bg-surface px-4 py-3">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-text-tertiary">{c.label}</p>
-              <p className="mt-1 text-2xl font-semibold tracking-tight text-text-primary">{c.value}</p>
+            <div key={c.label} data-spotlight className="rounded-xl border border-border bg-surface px-4 py-3.5 shadow-xs">
+              <p className="text-[11px] font-medium text-text-tertiary">{c.label}</p>
+              <p className="mt-1.5 text-[26px] font-semibold leading-none tracking-[-0.04em] text-text-primary num">{c.value}</p>
             </div>
           ))}
         </div>
 
         <div className="overflow-hidden rounded-xl border border-border bg-surface">
           <div className="flex flex-wrap items-center gap-2 border-b border-border px-4 py-3">
-            <div className="flex overflow-hidden rounded-lg border border-border-strong text-xs font-medium">
-              {(["ALL", "Email", "Escalation"] as Kind[]).map((k) => (
-                <button key={k} onClick={() => setKind(k)} className={cn("px-3 py-1.5 transition-colors", kind === k ? "bg-navy-950 text-white" : "bg-surface text-text-secondary hover:bg-surface-muted")}>
-                  {k === "ALL" ? "All" : k === "Email" ? "Emails" : "Escalations"}
-                </button>
-              ))}
-            </div>
+            <Segmented
+              label="Filter by type"
+              value={kind}
+              options={[
+                { value: "ALL", label: "All" },
+                { value: "Email", label: "Emails" },
+                { value: "Escalation", label: "Escalations" },
+              ]}
+              onChange={setKind}
+            />
             <select
               value={failure}
               onChange={(e) => setFailure(e.target.value as FailureKey | "ALL")}
@@ -107,7 +111,7 @@ export default function NotificationsPage() {
             <div className="overflow-x-auto">
               <table className="w-full min-w-[1100px] border-collapse text-left text-xs">
                 <thead>
-                  <tr className="border-b border-border bg-surface-subtle text-[11px] font-semibold uppercase tracking-wide text-text-tertiary">
+                  <tr className="border-b border-border bg-surface-subtle text-[11px] font-medium text-text-tertiary">
                     <th className="px-4 py-2.5">Incident ID</th>
                     <th className="px-4 py-2.5">Subject</th>
                     <th className="px-4 py-2.5">Reason</th>

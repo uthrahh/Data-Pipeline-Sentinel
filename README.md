@@ -7,7 +7,9 @@
 ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white)
 ![Databricks](https://img.shields.io/badge/Databricks_Apps-FF3621?style=flat-square&logo=databricks&logoColor=white)
 
-> **This is the `static` branch (the repo's default).** It is hosted as a Databricks App only. The live, Databricks-backed variants live on `n-live` and `h-live`.
+> **This is `main`** — the static demo console with the redesigned interface, hosted as a Databricks App only. The previous interface is preserved on the `original` branch.
+
+**Interface:** a dark, graphite-and-crimson design system defined entirely by tokens in `Frontend/src/app/globals.css`. Press **Ctrl/Cmd + K** anywhere for a command palette (jump to a page, find an incident, switch workspace). The Pipelines table is windowed, so a 15-day range (600 rows) renders only the rows on screen.
 
 ## What's in it
 

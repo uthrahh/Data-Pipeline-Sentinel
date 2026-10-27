@@ -45,7 +45,7 @@ function Section({
       <div className="overflow-x-auto">
         <table className="w-full min-w-[900px] border-collapse text-left text-xs">
           <thead>
-            <tr className="border-b border-border bg-surface-subtle text-[11px] font-semibold uppercase tracking-wide text-text-tertiary">
+            <tr className="border-b border-border bg-surface-subtle text-[11px] font-medium text-text-tertiary">
               <th className="px-5 py-2.5">Table</th>
               <th className="px-4 py-2.5">Layer</th>
               <th className="px-4 py-2.5">Rows</th>
@@ -105,7 +105,7 @@ function Section({
                         <div className="overflow-x-auto rounded-lg border border-border bg-surface">
                           <table className="w-full min-w-[980px] border-collapse text-left text-xs">
                             <thead>
-                              <tr className="border-b border-border text-[10px] font-semibold uppercase tracking-wide text-text-tertiary">
+                              <tr className="border-b border-border text-[10px] font-medium text-text-tertiary">
                                 <th className="px-3 py-2">#</th>
                                 <th className="px-3 py-2">Data quality check</th>
                                 <th className="px-3 py-2">What it detects</th>
@@ -195,7 +195,7 @@ export default function DataValidationPage() {
   return (
     <div className="flex flex-col">
       <PageHeader title="Data Validation" description="Run the 10 data quality checks on every source table and on every table that the pipelines produce." />
-      <div className="flex flex-col gap-5 p-4 sm:p-6">
+      <div className="flex flex-col gap-5 p-4 sm:px-8 sm:pb-10 sm:pt-6">
         <Section
           title="Source tables"
           description="Raw SAP extracts that feed the pipeline runs. Expand the arrow to open the checks."

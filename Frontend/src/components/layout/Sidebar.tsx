@@ -1,79 +1,40 @@
-"use client";
-
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import {
-  Activity,
-  AlertOctagon,
-  Gauge,
-  LayoutGrid,
-  Mail,
-  ShieldCheck,
-} from "lucide-react";
 import { cn } from "@/lib/utils";
+import { BrandMark } from "./BrandMark";
+import { SidebarNav } from "./SidebarNav";
 
-const NAV_ITEMS = [
-  { href: "/overview", label: "Overview", icon: LayoutGrid },
-  { href: "/pipelines", label: "Pipelines", icon: Activity },
-  { href: "/incidents", label: "Incidents", icon: AlertOctagon },
-  { href: "/notifications", label: "Notifications", icon: Mail },
-  { href: "/data-validation", label: "Data Validation", icon: ShieldCheck },
-];
+export function SidebarFooter() {
+  return (
+    <div className="p-3">
+      <div data-spotlight className="rounded-xl border border-border bg-white/[0.02] p-3">
+        <p className="flex items-center gap-2 text-[11px] font-medium text-text-secondary">
+          <span className="relative flex size-2">
+            <span className="animate-ping-ring absolute inset-0 rounded-full bg-success-500" />
+            <span className="relative size-2 rounded-full bg-success-500" />
+          </span>
+          All agents online
+        </p>
+        <p className="mt-1.5 font-mono text-[10px] leading-relaxed text-text-tertiary">
+          Production · Unity Catalog
+          <br />
+          Genie · Investigation · SLA · DQ
+        </p>
+      </div>
+    </div>
+  );
+}
 
 export function Sidebar({ className }: { className?: string }) {
-  const pathname = usePathname();
-
   return (
-    <aside
-      className={cn(
-        "hidden w-60 shrink-0 flex-col bg-navy-950 text-text-inverse lg:flex",
-        className,
-      )}
-    >
-      <div className="flex h-14 items-center gap-2.5 border-b border-white/10 px-5">
-        <div className="flex size-7 items-center justify-center rounded-md bg-accent-500">
-          <Gauge className="size-4 text-white" strokeWidth={2.25} />
-        </div>
+    <aside className={cn("hidden w-[248px] shrink-0 flex-col border-r border-border bg-navy-950 lg:flex", className)}>
+      <div className="flex h-16 items-center gap-3 px-5">
+        <BrandMark />
         <div className="leading-tight">
-          <p className="text-sm font-semibold tracking-tight">Sentinel</p>
-          <p className="text-[10px] font-medium uppercase tracking-wider text-white/40">AI Pipeline</p>
+          <p className="text-[15px] font-semibold tracking-[-0.02em] text-text-primary">Sentinel</p>
+          <p className="text-[10px] font-medium tracking-wide text-text-tertiary">AI pipeline operations</p>
         </div>
       </div>
-
-      <nav className="flex-1 space-y-0.5 px-3 py-4">
-        {NAV_ITEMS.map((item) => {
-          const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
-          const Icon = item.icon;
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "group flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors",
-                active
-                  ? "bg-white/10 text-white"
-                  : "text-white/55 hover:bg-white/5 hover:text-white/85",
-              )}
-            >
-              <Icon
-                className={cn("size-[17px] shrink-0", active ? "text-accent-400" : "text-white/40 group-hover:text-white/70")}
-                strokeWidth={2}
-              />
-              {item.label}
-            </Link>
-          );
-        })}
-      </nav>
-
-      <div className="border-t border-white/10 px-4 py-4">
-        <div className="rounded-lg bg-white/5 px-3 py-2.5">
-          <p className="text-[11px] font-medium text-white/50">Environment</p>
-          <p className="mt-0.5 flex items-center gap-1.5 text-xs font-semibold text-white/90">
-            <span className="size-1.5 rounded-full bg-success-500" />
-            Production · Unity Catalog
-          </p>
-        </div>
-      </div>
+      <SidebarNav />
+      <SidebarFooter />
     </aside>
   );
 }

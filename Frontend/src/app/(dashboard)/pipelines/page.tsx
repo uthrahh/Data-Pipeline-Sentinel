@@ -1,15 +1,17 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import { memo, useCallback, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { Bot, Search } from "lucide-react";
 import { PageHeader } from "@/components/common/PageHeader";
+import { Segmented } from "@/components/common/Segmented";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { EmptyState } from "@/components/common/EmptyState";
 import { PIPELINE_BY_ID, WORKSPACE_BY_ID, inWorkspace } from "@/ops/catalog";
 import { approvalStatus, overallStatus, remediationStatus, validationStatus } from "@/ops/derive";
 import { FAILURE_BY_KEY, FAILURE_TYPES, type FailureKey } from "@/ops/failureTypes";
 import { DateRangePicker, type DateRange } from "@/components/pipeline/DateRangePicker";
+import { useVirtualRows } from "@/hooks/useVirtualRows";
 import { useOps } from "@/ops/store";
 import { DQ_STYLES, EXECUTION_STATUS_STYLES, INCIDENT_STATUS_STYLES, SLA_STYLES } from "@/ops/styles";
 import type { Incident, PipelineRun } from "@/ops/types";
@@ -17,9 +19,10 @@ import { cn, formatDateTime, formatDuration } from "@/lib/utils";
 
 type StatusFilter = "ALL" | "SUCCESS" | "FAILED";
 
+const ROW_HEIGHT = 56;
+
 interface Column {
   label: string;
-  className?: string;
   render: (r: PipelineRun, i: Incident | undefined) => ReactNode;
 }
 
@@ -27,29 +30,29 @@ const mono = (v: string) => <span className="font-mono text-[11px] text-text-sec
 const dash = <span className="text-text-tertiary">—</span>;
 
 const COLUMNS: Column[] = [
-  { label: "Pipeline", className: "sticky left-0 z-10 bg-surface", render: (r) => <span className="font-medium text-text-primary">{r.pipeline}</span> },
-  { label: "Responsible Person", render: (r) => <span className="font-medium text-text-primary">{PIPELINE_BY_ID[r.pipelineId]?.owner.name ?? "—"}</span> },
+  { label: "Pipeline", render: (r) => <span className="font-medium text-text-primary">{r.pipeline}</span> },
+  { label: "Responsible person", render: (r) => <span className="font-medium text-text-primary">{PIPELINE_BY_ID[r.pipelineId]?.owner.name ?? "—"}</span> },
   { label: "Job ID", render: (r) => mono(r.jobId) },
   { label: "Run ID", render: (r) => mono(r.runId) },
-  { label: "Start Time", render: (r) => <span className="text-text-secondary">{formatDateTime(r.startTime)}</span> },
-  { label: "End Time", render: (r) => <span className="text-text-secondary">{formatDateTime(r.endTime)}</span> },
+  { label: "Start time", render: (r) => <span className="text-text-secondary">{formatDateTime(r.startTime)}</span> },
+  { label: "End time", render: (r) => <span className="text-text-secondary">{formatDateTime(r.endTime)}</span> },
   { label: "Duration", render: (r) => <span className="text-text-secondary">{formatDuration(r.durationMinutes)}</span> },
-  { label: "Execution Status", render: (r) => <StatusBadge style={EXECUTION_STATUS_STYLES[r.executionStatus]} /> },
-  { label: "Detected At", render: (r) => <span className="text-text-secondary">{formatDateTime(r.detectedAt)}</span> },
+  { label: "Execution status", render: (r) => <StatusBadge style={EXECUTION_STATUS_STYLES[r.executionStatus]} /> },
+  { label: "Detected at", render: (r) => <span className="text-text-secondary">{formatDateTime(r.detectedAt)}</span> },
   {
     label: "Incident ID",
     render: (r, i) =>
       i ? (
-        <Link href={`/incidents/${i.id}`} className="font-mono text-[11px] text-accent-600 hover:underline">
+        <Link href={`/incidents/${i.id}`} className="font-mono text-[11px] text-accent-600 hover:text-accent-700 hover:underline">
           {i.id}
         </Link>
       ) : (
         dash
       ),
   },
-  { label: "Incident Status", render: (_, i) => (i ? <StatusBadge style={INCIDENT_STATUS_STYLES[i.status]} pulse={i.status === "REMEDIATING"} /> : dash) },
+  { label: "Incident status", render: (_, i) => (i ? <StatusBadge style={INCIDENT_STATUS_STYLES[i.status]} pulse={i.status === "REMEDIATING"} /> : dash) },
   {
-    label: "Recommended Action",
+    label: "Recommended action",
     render: (_, i) => {
       if (!i) return dash;
       const def = FAILURE_BY_KEY[i.failureKey];
@@ -68,15 +71,31 @@ const COLUMNS: Column[] = [
       );
     },
   },
-  { label: "Approval Status", render: (_, i) => (i ? mono(approvalStatus(i)) : dash) },
-  { label: "Remediation Status", render: (_, i) => (i ? mono(remediationStatus(i)) : dash) },
-  { label: "DQ Status", render: (r) => <StatusBadge style={DQ_STYLES[r.dqStatus]} /> },
-  { label: "SLA Status", render: (r) => <StatusBadge style={SLA_STYLES[r.slaStatus]} /> },
-  { label: "Validation Status", render: (_, i) => (i ? mono(validationStatus(i)) : dash) },
-  { label: "Issue Type", render: (_, i) => (i ? <span className="font-medium text-text-primary">{FAILURE_BY_KEY[i.failureKey].label}</span> : dash) },
+  { label: "Approval status", render: (_, i) => (i ? mono(approvalStatus(i)) : dash) },
+  { label: "Remediation status", render: (_, i) => (i ? mono(remediationStatus(i)) : dash) },
+  { label: "DQ status", render: (r) => <StatusBadge style={DQ_STYLES[r.dqStatus]} /> },
+  { label: "SLA status", render: (r) => <StatusBadge style={SLA_STYLES[r.slaStatus]} /> },
+  { label: "Validation status", render: (_, i) => (i ? mono(validationStatus(i)) : dash) },
+  { label: "Issue type", render: (_, i) => (i ? <span className="font-medium text-text-primary">{FAILURE_BY_KEY[i.failureKey].label}</span> : dash) },
   { label: "Criticality", render: (_, i) => (i ? mono(i.severity) : dash) },
-  { label: "Overall Status", render: (r, i) => mono(overallStatus(r, i)) },
+  { label: "Overall status", render: (r, i) => mono(overallStatus(r, i)) },
 ];
+
+/** Opaque so scrolling cells never show through the pinned first column. */
+const PINNED = "sticky left-0 z-10 bg-surface group-hover:bg-[#10151c]";
+
+const RunRow = memo(function RunRow({ run, incident }: { run: PipelineRun; incident: Incident | undefined }) {
+  const failed = run.executionStatus !== "SUCCESS";
+  return (
+    <tr style={{ height: ROW_HEIGHT }} className="group border-b border-border transition-colors hover:bg-white/[0.025]">
+      {COLUMNS.map((c, idx) => (
+        <td key={c.label} className={cn("whitespace-nowrap px-4", idx === 0 && [PINNED, failed && "shadow-[inset_3px_0_0_var(--color-danger-500)]"])}>
+          {c.render(run, incident)}
+        </td>
+      ))}
+    </tr>
+  );
+});
 
 function dayLabel(day: string): string {
   return new Date(`${day}T00:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
@@ -121,14 +140,28 @@ export default function PipelinesPage() {
     return { total: dayRuns.length, failed, success: dayRuns.length - failed, critical: dayRuns.filter((r) => r.slaStatus === "CRITICAL").length };
   }, [dayRuns]);
 
-  return (
-    <div className="flex flex-col">
-      <PageHeader title="Pipeline Runs" description={`${WORKSPACE_BY_ID[workspace].name} — every pipeline run for the last ${days.length} days, with its incident, SLA and remediation status.`} />
+  // Only the rows near the viewport are in the DOM, so a 15-day range (600 rows) scrolls as smoothly as a single day.
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const { start, end, onScroll } = useVirtualRows(scrollRef, ordered.length, ROW_HEIGHT, 8);
+  const visible = ordered.slice(start, end);
+  const resetScroll = useCallback(() => scrollRef.current?.scrollTo({ top: 0 }), []);
 
-      <div className="flex flex-col gap-4 p-4 sm:p-6">
+  return (
+    <div className="flex flex-col pb-6">
+      <PageHeader title="Pipeline runs" description={`${WORKSPACE_BY_ID[workspace].name} — every pipeline run for the last ${days.length} days, with its incident, SLA and remediation status.`} />
+
+      <div className="flex flex-col gap-4 p-4 sm:px-8 sm:pt-6">
         <div className="flex flex-wrap items-center gap-3">
-          <DateRangePicker days={days} today={today} value={range} onChange={setRange} />
-          <div className="flex items-center gap-4 text-xs text-text-secondary">
+          <DateRangePicker
+            days={days}
+            today={today}
+            value={range}
+            onChange={(r) => {
+              setRange(r);
+              resetScroll();
+            }}
+          />
+          <div className="num flex items-center gap-4 text-xs text-text-secondary">
             <span>
               <strong className="text-text-primary">{stats.total}</strong> runs
             </span>
@@ -143,22 +176,27 @@ export default function PipelinesPage() {
             </span>
           </div>
           <div className="ml-auto flex flex-wrap items-center gap-2">
-            <div className="flex overflow-hidden rounded-lg border border-border-strong text-xs font-medium">
-              {(["ALL", "SUCCESS", "FAILED"] as StatusFilter[]).map((s) => (
-                <button
-                  key={s}
-                  onClick={() => setStatus(s)}
-                  className={cn("px-3 py-1.5 transition-colors", status === s ? "bg-navy-950 text-white" : "bg-surface text-text-secondary hover:bg-surface-muted")}
-                >
-                  {s === "ALL" ? "All" : s === "SUCCESS" ? "Success" : "Failed"}
-                </button>
-              ))}
-            </div>
+            <Segmented
+              label="Filter by execution status"
+              value={status}
+              options={[
+                { value: "ALL", label: "All" },
+                { value: "SUCCESS", label: "Success" },
+                { value: "FAILED", label: "Failed" },
+              ]}
+              onChange={(v) => {
+                setStatus(v);
+                resetScroll();
+              }}
+            />
             <select
               value={failure}
-              onChange={(e) => setFailure(e.target.value as FailureKey | "ALL")}
+              onChange={(e) => {
+                setFailure(e.target.value as FailureKey | "ALL");
+                resetScroll();
+              }}
               aria-label="Filter by failure type"
-              className="rounded-lg border border-border-strong bg-surface px-2.5 py-1.5 text-xs text-text-secondary"
+              className="h-8 rounded-lg border border-border bg-surface-sunken px-2.5 text-xs text-text-secondary transition-colors hover:border-border-strong"
             >
               <option value="ALL">All failure types</option>
               {FAILURE_TYPES.map((f) => (
@@ -167,11 +205,14 @@ export default function PipelinesPage() {
                 </option>
               ))}
             </select>
-            <div className="flex items-center gap-2 rounded-lg border border-border-strong bg-surface px-2.5 py-1.5">
+            <div className="flex h-8 items-center gap-2 rounded-lg border border-border bg-surface-sunken px-2.5 transition-colors focus-within:border-border-strong hover:border-border-strong">
               <Search className="size-3.5 text-text-tertiary" />
               <input
                 value={query}
-                onChange={(e) => setQuery(e.target.value)}
+                onChange={(e) => {
+                  setQuery(e.target.value);
+                  resetScroll();
+                }}
                 placeholder="Search pipeline, run or incident"
                 aria-label="Search runs"
                 className="w-52 bg-transparent text-xs text-text-primary outline-none placeholder:text-text-tertiary"
@@ -180,46 +221,41 @@ export default function PipelinesPage() {
           </div>
         </div>
 
-        <div className="overflow-hidden rounded-xl border border-border bg-surface">
+        <div className="overflow-hidden rounded-xl border border-border bg-surface shadow-xs">
           {rows.length === 0 ? (
             <EmptyState title="No runs match" description="Try a different date range, status or failure type." />
           ) : (
-            <div className="max-h-[calc(100dvh-280px)] min-h-64 overflow-auto">
+            <div ref={scrollRef} onScroll={onScroll} className="h-[calc(100dvh-300px)] min-h-72 overflow-auto">
               <table className="w-max min-w-full border-collapse text-left text-xs">
                 <thead className="sticky top-0 z-20">
-                  <tr className="border-b border-border bg-surface-subtle">
+                  <tr className="border-b border-border bg-surface">
                     {COLUMNS.map((c, idx) => (
-                      <th
-                        key={c.label}
-                        className={cn(
-                          "whitespace-nowrap px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-text-tertiary",
-                          idx === 0 && "sticky left-0 z-30 bg-surface-subtle",
-                        )}
-                      >
+                      <th key={c.label} className={cn("whitespace-nowrap bg-surface px-4 py-3 text-[11px] font-medium text-text-tertiary", idx === 0 && "sticky left-0 z-30")}>
                         {c.label}
                       </th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {ordered.map((r) => {
-                    const inc = r.incidentId ? incidentById.get(r.incidentId) : undefined;
-                    return (
-                      <tr key={r.runId} className="border-b border-border transition-colors last:border-0 hover:bg-surface-subtle">
-                        {COLUMNS.map((c, idx) => (
-                          <td key={c.label} className={cn("whitespace-nowrap px-4 py-3", idx === 0 && c.className)}>
-                            {c.render(r, inc)}
-                          </td>
-                        ))}
-                      </tr>
-                    );
-                  })}
+                  {start > 0 && (
+                    <tr aria-hidden="true" style={{ height: start * ROW_HEIGHT }}>
+                      <td colSpan={COLUMNS.length} />
+                    </tr>
+                  )}
+                  {visible.map((r) => (
+                    <RunRow key={r.runId} run={r} incident={r.incidentId ? incidentById.get(r.incidentId) : undefined} />
+                  ))}
+                  {end < ordered.length && (
+                    <tr aria-hidden="true" style={{ height: (ordered.length - end) * ROW_HEIGHT }}>
+                      <td colSpan={COLUMNS.length} />
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
           )}
         </div>
-        <p className="text-[11px] text-text-tertiary">
+        <p className="num text-[11px] text-text-tertiary">
           Showing {rows.length} of {stats.total} runs for {rangeLabel(range)}. All times are in UTC.
         </p>
       </div>
