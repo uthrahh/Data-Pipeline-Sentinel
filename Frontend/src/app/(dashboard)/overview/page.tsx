@@ -102,7 +102,7 @@ export default function OverviewPage() {
       <PageHeader title="Pipeline overview" description={`${WORKSPACE_BY_ID[workspace].name} · ${formatDate(`${today}T00:00:00Z`)} (UTC) · health, incidents and remediation across the last ${days.length} days.`} />
 
       <div className="flex flex-col gap-4 p-4 sm:px-8 sm:pt-6">
-        <section aria-label="Key metrics" className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
+        <section aria-label="Key metrics" className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-1 sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0 sm:pb-0 xl:grid-cols-5 [&>*]:min-w-44 [&>*]:shrink-0 [&>*]:snap-start sm:[&>*]:min-w-0">
           <StatTile index={0} label="Total pipeline runs" value={<AnimatedNumber value={view.total} format={int} />} supporting="runs today" tone="neutral" split={{ good: view.total - view.failed, bad: view.failed }} />
           <StatTile index={1} label="Failed pipeline runs" value={<AnimatedNumber value={view.failed} format={int} />} supporting="failures today" tone="danger" trend={view.trends.failed} />
           <StatTile index={2} label="Pipeline success rate" value={<AnimatedNumber value={view.successRate} format={pct} />} supporting={`${view.total - view.failed} of ${view.total} runs succeeded`} tone="success" ring={view.successRate} />
@@ -156,7 +156,7 @@ export default function OverviewPage() {
               <ul>
                 {view.attention.map((i) => (
                   <li key={i.id} className="border-b border-border last:border-0">
-                    <Link href={`/incidents/${i.id}`} className="group relative flex flex-wrap items-center justify-between gap-3 py-3.5 pl-6 pr-5 transition-colors hover:bg-white/[0.025]">
+                    <Link href={`/incidents/${i.id}`} className="group relative flex flex-wrap items-center justify-between gap-3 py-3.5 pl-6 pr-5 transition-colors hover:bg-tint-1">
                       <span className={cn("absolute inset-y-3 left-0 w-[3px] rounded-r-full", SEVERITY_RAIL[i.severity])} />
                       <div className="min-w-0">
                         <p className="truncate text-sm font-medium text-text-primary">{i.pipeline}</p>
@@ -208,7 +208,7 @@ export default function OverviewPage() {
                 </thead>
                 <tbody>
                   {view.recent.map((r) => (
-                    <tr key={r.runId} className="border-b border-border transition-colors last:border-0 hover:bg-white/[0.025]">
+                    <tr key={r.runId} className="border-b border-border transition-colors last:border-0 hover:bg-tint-1">
                       <td className="px-5 py-3 font-medium text-text-primary">{r.pipeline}</td>
                       <td className="px-4 py-3">
                         <StatusBadge style={EXECUTION_STATUS_STYLES[r.executionStatus]} />

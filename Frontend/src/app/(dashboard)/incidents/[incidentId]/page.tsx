@@ -507,7 +507,7 @@ export default function IncidentDetailPage() {
               </div>
               <div className="relative mt-4 h-2.5 rounded-full bg-surface-muted" role="img" aria-label={`Runtime ${incident.durationMinutes} minutes against a ${SLA_BASELINE_MINUTES} minute baseline`}>
                 <div className={cn("h-full rounded-full", incident.slaStatus === "CRITICAL" ? "bg-danger-500" : "bg-success-500")} style={{ width: `${(incident.durationMinutes / scaleMax) * 100}%` }} />
-                <div className="absolute -top-1 h-4.5 w-0.5 bg-navy-950" style={{ left: `${(SLA_BASELINE_MINUTES / scaleMax) * 100}%` }} title={`${SLA_BASELINE_MINUTES} min baseline`} />
+                <div className="absolute -top-1 h-4.5 w-0.5 bg-text-primary" style={{ left: `${(SLA_BASELINE_MINUTES / scaleMax) * 100}%` }} title={`${SLA_BASELINE_MINUTES} min baseline`} />
               </div>
               <p className="mt-2 text-xs text-text-tertiary">
                 {incident.slaStatus === "CRITICAL"

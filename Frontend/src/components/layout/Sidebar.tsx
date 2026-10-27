@@ -5,7 +5,7 @@ import { SidebarNav } from "./SidebarNav";
 export function SidebarFooter() {
   return (
     <div className="p-3">
-      <div data-spotlight className="rounded-xl border border-border bg-white/[0.02] p-3">
+      <div data-spotlight className="rounded-xl border border-border bg-tint-1 p-3">
         <p className="flex items-center gap-2 text-[11px] font-medium text-text-secondary">
           <span className="relative flex size-2">
             <span className="animate-ping-ring absolute inset-0 rounded-full bg-success-500" />

@@ -8,12 +8,14 @@ import { WORKSPACES, inWorkspace } from "@/ops/catalog";
 import { FAILURE_BY_KEY } from "@/ops/failureTypes";
 import { isActive } from "@/ops/derive";
 import { setWorkspace, useOps } from "@/ops/store";
+import { setTheme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 import { NAV_ITEMS } from "./nav";
+import { THEME_OPTIONS } from "./ThemeToggle";
 
 interface Command {
   id: string;
-  group: "Go to" | "Incidents" | "Workspace";
+  group: "Go to" | "Incidents" | "Workspace" | "Appearance";
   title: string;
   sub?: string;
   icon: LucideIcon;
@@ -43,6 +45,15 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
       keywords: `workspace ${w.name.toLowerCase()}`,
       run: () => setWorkspace(w.id),
     }));
+    const themes: Command[] = THEME_OPTIONS.map((t) => ({
+      id: `theme-${t.value}`,
+      group: "Appearance",
+      title: `Use ${t.label.toLowerCase()} theme`,
+      sub: t.value === "system" ? "Follow the operating system" : undefined,
+      icon: t.icon,
+      keywords: `theme appearance mode ${t.label.toLowerCase()}`,
+      run: () => setTheme(t.value),
+    }));
     const scoped = incidents.filter((i) => inWorkspace(i.pipelineId, workspace));
     // With no query, suggest the open incidents; with one, search all of them.
     const pool = q ? scoped : scoped.filter(isActive);
@@ -58,7 +69,7 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
       }))
       .filter((c) => !q || c.keywords.includes(q))
       .slice(0, MAX_INCIDENTS);
-    return [...pages, ...found, ...spaces].filter((c) => !q || c.group === "Incidents" || c.keywords.includes(q));
+    return [...pages, ...found, ...spaces, ...themes].filter((c) => !q || c.group === "Incidents" || c.keywords.includes(q));
   }, [query, incidents, workspace, router]);
 
   useEffect(() => {
@@ -141,7 +152,7 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
                   data-index={idx}
                   onMouseMove={() => setCursor(idx)}
                   onClick={() => choose(c)}
-                  className={cn("flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors", idx === cursor && "bg-white/[0.06]")}
+                  className={cn("flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors", idx === cursor && "bg-tint-3")}
                 >
                   <Icon className={cn("size-4 shrink-0", idx === cursor ? "text-accent-400" : "text-text-tertiary")} strokeWidth={1.75} />
                   <span className="min-w-0 flex-1">

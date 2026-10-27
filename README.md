@@ -9,7 +9,7 @@
 
 > **This is `main`** — the static demo console with the redesigned interface, hosted as a Databricks App only. The previous interface is preserved on the `original` branch.
 
-**Interface:** a dark, graphite-and-crimson design system defined entirely by tokens in `Frontend/src/app/globals.css`. Press **Ctrl/Cmd + K** anywhere for a command palette (jump to a page, find an incident, switch workspace). The Pipelines table is windowed, so a 15-day range (600 rows) renders only the rows on screen.
+**Interface:** a graphite-and-crimson design system with **light and dark modes** (a toggle in the top bar; dark by default, or follow the system; the choice is remembered) defined entirely by tokens in `Frontend/src/app/globals.css`. Press **Ctrl/Cmd + K** anywhere for a command palette (jump to a page, find an incident, switch workspace). The Pipelines table is windowed, so a 15-day range (600 rows) renders only the rows on screen.
 
 ## What's in it
 

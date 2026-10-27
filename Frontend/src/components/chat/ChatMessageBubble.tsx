@@ -30,7 +30,7 @@ export function ChatMessageBubble({ message }: { message: ChatMessage }) {
 
   return (
     <div className="flex gap-2.5">
-      <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-navy-900 text-white">
+      <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-surface-muted text-text-primary ring-1 ring-inset ring-border-strong">
         <Bot className="size-3.5" />
       </div>
       <div className="min-w-0 flex-1 space-y-2">

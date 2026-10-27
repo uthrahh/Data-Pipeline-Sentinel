@@ -1,79 +1,96 @@
 @import "tailwindcss";
 
 /*
- * Design tokens — a single graphite family (cool-tinted), one brand accent (crimson),
- * and four status hues. Component code only ever references these names, so the whole
- * interface re-themes from here.
+ * Design tokens. Every colour is a light-dark(light, dark) pair, so the whole interface re-themes
+ * from one place. `color-scheme` decides which side applies: it follows the OS by default and is
+ * pinned by the data-theme attribute that the theme toggle sets on <html>.
  *
- * Scale convention on this dark theme:
+ * One graphite family (cool-tinted), one brand accent (crimson), four status hues.
+ *
+ * Scale convention for hues:
  *   *-50   a faint tinted wash for backgrounds
  *   *-500  the solid fill / dot colour
  *   *-600  link and icon colour
- *   *-700  badge and emphasis text (lightest)
+ *   *-700  badge and emphasis text (highest contrast)
  */
 :root {
+  color-scheme: light dark;
+
   /* Surfaces: page < card < raised */
-  --color-surface: #0e1218;
-  --color-surface-subtle: #090c10;
-  --color-surface-muted: #161b23;
-  --color-surface-sunken: #07090c;
+  --color-surface: light-dark(#ffffff, #0e1218);
+  --color-surface-subtle: light-dark(#f3f5f8, #090c10);
+  --color-surface-muted: light-dark(#eceff4, #161b23);
+  --color-surface-sunken: light-dark(#e8ebf1, #07090c);
+  --color-surface-hover: light-dark(#f6f8fb, #10151c);
+
+  /* Translucent washes for hover / selected states that work on either theme */
+  --color-tint-1: light-dark(rgb(15 23 42 / 0.025), rgb(255 255 255 / 0.025));
+  --color-tint-2: light-dark(rgb(15 23 42 / 0.045), rgb(255 255 255 / 0.045));
+  --color-tint-3: light-dark(rgb(15 23 42 / 0.07), rgb(255 255 255 / 0.065));
 
   /* Chrome (sidebar, overlays) */
-  --color-navy-950: #06080b;
-  --color-navy-900: #0a0d12;
-  --color-navy-800: #12161d;
-  --color-navy-700: #1b212b;
-  --color-navy-600: #2a323e;
+  --color-navy-950: light-dark(#fafbfd, #06080b);
+  --color-navy-900: light-dark(#f3f5f8, #0a0d12);
+  --color-navy-800: light-dark(#ffffff, #12161d);
+  --color-navy-700: light-dark(#e3e7ee, #1b212b);
+  --color-navy-600: light-dark(#cdd3de, #2a323e);
 
-  /* Brand accent — KaarTech crimson, lifted for dark surfaces */
-  --color-accent-50: rgb(226 62 68 / 0.11);
-  --color-accent-100: rgb(226 62 68 / 0.2);
-  --color-accent-200: rgb(226 62 68 / 0.38);
-  --color-accent-400: #f0686c;
-  --color-accent-500: #d3272d;
-  --color-accent-600: #f2797d;
-  --color-accent-700: #ff9a9d;
+  /* Brand accent: KaarTech crimson, lifted for dark surfaces and deepened for light ones */
+  --color-accent-50: light-dark(rgb(195 34 42 / 0.07), rgb(226 62 68 / 0.11));
+  --color-accent-100: light-dark(rgb(195 34 42 / 0.13), rgb(226 62 68 / 0.2));
+  --color-accent-200: light-dark(rgb(195 34 42 / 0.28), rgb(226 62 68 / 0.38));
+  --color-accent-400: light-dark(#c8232b, #f0686c);
+  --color-accent-500: light-dark(#c6232a, #d3272d);
+  --color-accent-600: light-dark(#b01e25, #f2797d);
+  --color-accent-700: light-dark(#8c161c, #ff9a9d);
 
   /* Text */
-  --color-text-primary: #e8ecf2;
-  --color-text-secondary: #a0a9b8;
-  --color-text-tertiary: #768092;
-  --color-text-inverse: #f1f4f8;
+  --color-text-primary: light-dark(#0f131a, #e8ecf2);
+  --color-text-secondary: light-dark(#434c5b, #a0a9b8);
+  --color-text-tertiary: light-dark(#667082, #768092);
+  --color-text-inverse: light-dark(#0f131a, #f1f4f8);
 
   /* Hairlines */
-  --color-border: #1b212a;
-  --color-border-strong: #2a323e;
+  --color-border: light-dark(#e1e5ec, #1b212a);
+  --color-border-strong: light-dark(#ccd2dd, #2a323e);
 
   /* Status */
-  --color-success-50: rgb(52 197 138 / 0.1);
-  --color-success-500: #2fbf86;
-  --color-success-600: #4fd29c;
-  --color-success-700: #86e3bb;
+  --color-success-50: light-dark(rgb(16 150 98 / 0.09), rgb(52 197 138 / 0.1));
+  --color-success-500: light-dark(#14a56d, #2fbf86);
+  --color-success-600: light-dark(#0c8559, #4fd29c);
+  --color-success-700: light-dark(#096544, #86e3bb);
 
-  --color-warning-50: rgb(224 160 50 / 0.1);
-  --color-warning-500: #dd9d2e;
-  --color-warning-600: #eeb24a;
-  --color-warning-700: #f6cb78;
+  --color-warning-50: light-dark(rgb(200 125 10 / 0.1), rgb(224 160 50 / 0.1));
+  --color-warning-500: light-dark(#d68a12, #dd9d2e);
+  --color-warning-600: light-dark(#a66608, #eeb24a);
+  --color-warning-700: light-dark(#7d4c07, #f6cb78);
 
-  --color-danger-50: rgb(240 98 120 / 0.1);
-  --color-danger-500: #e8506a;
-  --color-danger-600: #f4768b;
-  --color-danger-700: #fa9eae;
+  --color-danger-50: light-dark(rgb(214 52 82 / 0.08), rgb(240 98 120 / 0.1));
+  --color-danger-500: light-dark(#d93a55, #e8506a);
+  --color-danger-600: light-dark(#bd2c47, #f4768b);
+  --color-danger-700: light-dark(#962037, #fa9eae);
 
-  --color-info-50: rgb(90 167 255 / 0.1);
-  --color-info-500: #4f9bf5;
-  --color-info-600: #7ab5fa;
-  --color-info-700: #a6cdfc;
+  --color-info-50: light-dark(rgb(37 99 235 / 0.08), rgb(90 167 255 / 0.1));
+  --color-info-500: light-dark(#3a7ce8, #4f9bf5);
+  --color-info-600: light-dark(#2562c9, #7ab5fa);
+  --color-info-700: light-dark(#1b4a9e, #a6cdfc);
 
-  --color-neutral-50: rgb(148 163 184 / 0.08);
-  --color-neutral-500: #7a8494;
-  --color-neutral-600: #a0a9b8;
+  --color-neutral-50: light-dark(rgb(100 116 139 / 0.09), rgb(148 163 184 / 0.08));
+  --color-neutral-500: light-dark(#6c7585, #7a8494);
+  --color-neutral-600: light-dark(#4a5465, #a0a9b8);
 
-  /* Shadows are black-tinted and paired with a 1px light edge — one light source, top-left */
-  --shadow-xs: 0 1px 0 0 rgb(255 255 255 / 0.03) inset, 0 1px 2px 0 rgb(0 0 0 / 0.35);
-  --shadow-sm: 0 1px 0 0 rgb(255 255 255 / 0.04) inset, 0 2px 6px -1px rgb(0 0 0 / 0.45);
-  --shadow-md: 0 1px 0 0 rgb(255 255 255 / 0.05) inset, 0 8px 20px -6px rgb(0 0 0 / 0.55);
-  --shadow-lg: 0 1px 0 0 rgb(255 255 255 / 0.06) inset, 0 24px 56px -12px rgb(0 0 0 / 0.7), 0 0 0 1px rgb(255 255 255 / 0.04);
+  /* Shadows are tinted and paired with a 1px light edge: one light source, top-left */
+  --shadow-xs: 0 1px 0 0 light-dark(rgb(255 255 255 / 0.8), rgb(255 255 255 / 0.03)) inset, 0 1px 2px 0 light-dark(rgb(15 23 42 / 0.07), rgb(0 0 0 / 0.35));
+  --shadow-sm: 0 1px 0 0 light-dark(rgb(255 255 255 / 0.8), rgb(255 255 255 / 0.04)) inset, 0 2px 6px -1px light-dark(rgb(15 23 42 / 0.1), rgb(0 0 0 / 0.45));
+  --shadow-md: 0 1px 0 0 light-dark(rgb(255 255 255 / 0.8), rgb(255 255 255 / 0.05)) inset, 0 8px 20px -6px light-dark(rgb(15 23 42 / 0.14), rgb(0 0 0 / 0.55));
+  --shadow-lg: 0 1px 0 0 light-dark(rgb(255 255 255 / 0.8), rgb(255 255 255 / 0.06)) inset, 0 24px 56px -12px light-dark(rgb(15 23 42 / 0.22), rgb(0 0 0 / 0.7)), 0 0 0 1px light-dark(rgb(15 23 42 / 0.05), rgb(255 255 255 / 0.04));
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
 }
 
 @theme inline {
@@ -81,6 +98,10 @@
   --color-surface-subtle: var(--color-surface-subtle);
   --color-surface-muted: var(--color-surface-muted);
   --color-surface-sunken: var(--color-surface-sunken);
+  --color-surface-hover: var(--color-surface-hover);
+  --color-tint-1: var(--color-tint-1);
+  --color-tint-2: var(--color-tint-2);
+  --color-tint-3: var(--color-tint-3);
 
   --color-navy-950: var(--color-navy-950);
   --color-navy-900: var(--color-navy-900);
@@ -133,7 +154,6 @@
 }
 
 html {
-  color-scheme: dark;
   scroll-behavior: smooth;
 }
 
@@ -162,7 +182,6 @@ h3 {
 
 ::selection {
   background: var(--color-accent-200);
-  color: #fff;
 }
 
 table,
@@ -207,8 +226,8 @@ table,
 /* A faint crimson glow from the top-left corner and a slate wash bottom-right. Painted once, never animated. */
 .bg-atmosphere {
   background:
-    radial-gradient(900px 520px at 8% -10%, rgb(211 39 45 / 0.1), transparent 60%),
-    radial-gradient(800px 600px at 100% 110%, rgb(120 140 170 / 0.06), transparent 60%),
+    radial-gradient(900px 520px at 8% -10%, light-dark(rgb(198 35 42 / 0.07), rgb(211 39 45 / 0.1)), transparent 60%),
+    radial-gradient(800px 600px at 100% 110%, light-dark(rgb(90 110 150 / 0.08), rgb(120 140 170 / 0.06)), transparent 60%),
     var(--color-surface-subtle);
 }
 
@@ -219,7 +238,7 @@ table,
   inset: 0;
   z-index: 60;
   pointer-events: none;
-  opacity: 0.05;
+  opacity: 0.04;
   mix-blend-mode: overlay;
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.9 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
 }
@@ -238,7 +257,7 @@ table,
   pointer-events: none;
   opacity: 0;
   transition: opacity 0.3s ease;
-  background: radial-gradient(360px circle at var(--mx, 50%) var(--my, 0%), rgb(255 255 255 / 0.055), transparent 65%);
+  background: radial-gradient(360px circle at var(--mx, 50%) var(--my, 0%), light-dark(rgb(15 23 42 / 0.04), rgb(255 255 255 / 0.055)), transparent 65%);
 }
 [data-spotlight]:hover::before {
   opacity: 1;
@@ -382,7 +401,7 @@ table,
   position: absolute;
   inset: 0;
   transform: translateX(-100%);
-  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.05), transparent);
+  background: linear-gradient(90deg, transparent, light-dark(rgb(255 255 255 / 0.7), rgb(255 255 255 / 0.05)), transparent);
   animation: shimmer 1.4s infinite;
 }
 

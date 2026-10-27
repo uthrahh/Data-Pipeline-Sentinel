@@ -29,7 +29,7 @@ export function MobileNav({ open, onClose }: { open: boolean; onClose: () => voi
             <BrandMark />
             <p className="text-[15px] font-semibold tracking-[-0.02em]">Sentinel</p>
           </div>
-          <button onClick={onClose} className="flex size-8 items-center justify-center rounded-md text-text-tertiary hover:bg-white/5 hover:text-text-primary" aria-label="Close navigation">
+          <button onClick={onClose} className="flex size-8 items-center justify-center rounded-md text-text-tertiary hover:bg-tint-2 hover:text-text-primary" aria-label="Close navigation">
             <X className="size-4" />
           </button>
         </div>

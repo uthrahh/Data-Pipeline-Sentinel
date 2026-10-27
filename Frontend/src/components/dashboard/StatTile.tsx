@@ -15,7 +15,7 @@ const TONE_COLOR: Record<Tone, string> = {
 function Ring({ percent, color }: { percent: number; color: string }) {
   const p = Math.max(0, Math.min(100, percent));
   return (
-    <svg viewBox="0 0 44 44" className="size-12 shrink-0 -rotate-90" aria-hidden="true">
+    <svg viewBox="0 0 44 44" className="size-10 shrink-0 -rotate-90" aria-hidden="true">
       <circle cx="22" cy="22" r="17" fill="none" stroke="var(--color-border-strong)" strokeWidth="3.5" opacity="0.7" />
       <circle
         cx="22"
@@ -47,28 +47,24 @@ interface StatTileProps {
 
 export function StatTile({ label, value, supporting, tone = "neutral", trend, ring, split, index = 0 }: StatTileProps) {
   const color = TONE_COLOR[tone];
+  const hasSplit = split && split.good + split.bad > 0;
   return (
-    <div data-spotlight style={{ "--i": index } as CSSProperties} className="animate-rise flex flex-col justify-between rounded-xl border border-border bg-surface p-5 shadow-xs">
-      <div className="flex items-start justify-between gap-3">
-        <p className="text-[12px] font-medium text-text-secondary">{label}</p>
-        <span className="mt-1 size-1.5 rounded-full" style={{ background: color, boxShadow: `0 0 10px ${color}` }} />
+    <div data-spotlight style={{ "--i": index } as CSSProperties} className="animate-rise rounded-xl border border-border bg-surface px-4 py-3.5 shadow-xs">
+      <div className="flex items-center justify-between gap-2">
+        <p className="truncate text-[12px] font-medium text-text-secondary">{label}</p>
+        <span className="size-1.5 shrink-0 rounded-full" style={{ background: color, boxShadow: `0 0 10px ${color}` }} />
       </div>
-      <div className="mt-4 flex items-center justify-between gap-3">
-        <div className="min-w-0">
-          <p className="whitespace-nowrap text-[32px] font-semibold leading-none tracking-[-0.045em] text-text-primary">{value}</p>
-          {supporting && <p className="mt-2.5 text-xs leading-snug text-text-tertiary">{supporting}</p>}
-        </div>
-        {ring !== undefined && <Ring percent={ring} color={color} />}
+      <div className="mt-2 flex items-center justify-between gap-3">
+        <p className="whitespace-nowrap text-[28px] font-semibold leading-none tracking-[-0.045em] text-text-primary">{value}</p>
+        {ring !== undefined ? <Ring percent={ring} color={color} /> : trend ? <Sparkline data={trend} color={color} className="h-8 w-20 shrink-0" /> : null}
       </div>
-      {split && split.good + split.bad > 0 && (
-        <div className="mt-4 flex h-8 flex-col justify-end" aria-hidden="true">
-          <div className="flex h-1.5 gap-[2px] overflow-hidden rounded-full">
-            <div className="animate-grow-x rounded-l-full bg-success-500/60" style={{ width: `${(split.good / (split.good + split.bad)) * 100}%` }} />
-            <div className="animate-grow-x rounded-r-full bg-danger-500" style={{ width: `${(split.bad / (split.good + split.bad)) * 100}%`, "--i": 1 } as CSSProperties} />
-          </div>
+      {hasSplit ? (
+        <div className="mt-2.5 flex h-1 gap-[2px] overflow-hidden rounded-full" aria-hidden="true">
+          <div className="animate-grow-x rounded-l-full bg-success-500/60" style={{ width: `${(split.good / (split.good + split.bad)) * 100}%` }} />
+          <div className="animate-grow-x rounded-r-full bg-danger-500" style={{ width: `${(split.bad / (split.good + split.bad)) * 100}%`, "--i": 1 } as CSSProperties} />
         </div>
-      )}
-      {trend && <Sparkline data={trend} color={color} className="mt-4 h-8 w-full" />}
+      ) : null}
+      {supporting && <p className="mt-2 truncate text-[11px] text-text-tertiary">{supporting}</p>}
     </div>
   );
 }

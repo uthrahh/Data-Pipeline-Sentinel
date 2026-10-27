@@ -31,14 +31,14 @@ export function ChatPanel({ onClose }: { onClose: () => void }) {
       role="dialog"
       aria-label={GENIE.name}
     >
-      <div className="flex items-center justify-between gap-3 border-b border-border bg-navy-950 px-4 py-3.5 text-white">
+      <div className="flex items-center justify-between gap-3 border-b border-border bg-surface-subtle px-4 py-3.5 text-text-primary">
         <div className="flex items-center gap-2.5">
           <div className="flex size-8 items-center justify-center rounded-full bg-accent-500">
             <Bot className="size-4" />
           </div>
           <div>
             <p className="text-sm font-semibold leading-tight">Genie</p>
-            <p className="flex items-center gap-1 text-[11px] text-white/60">
+            <p className="flex items-center gap-1 text-[11px] text-text-tertiary">
               <span className="size-1.5 rounded-full bg-success-500" />
               {GENIE.name} · Connected
             </p>
@@ -47,7 +47,7 @@ export function ChatPanel({ onClose }: { onClose: () => void }) {
         <button
           onClick={onClose}
           aria-label="Close assistant"
-          className="flex size-7 items-center justify-center rounded-md text-white/60 transition-colors hover:bg-white/10 hover:text-white"
+          className="flex size-7 items-center justify-center rounded-md text-text-tertiary transition-colors hover:bg-tint-3 hover:text-text-primary"
         >
           <X className="size-4" />
         </button>

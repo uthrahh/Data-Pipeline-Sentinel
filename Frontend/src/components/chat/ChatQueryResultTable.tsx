@@ -45,7 +45,7 @@ export function ChatQueryResultTable({ result }: { result: ChatQueryResult }) {
         {result.sourceTable}
       </p>
       {result.generatedSql && (
-        <p className="truncate border-t border-border bg-navy-950 px-2.5 py-1.5 font-mono text-[10px] text-white/70" title={result.generatedSql}>
+        <p className="truncate border-t border-border bg-surface-sunken px-2.5 py-1.5 font-mono text-[10px] text-text-secondary" title={result.generatedSql}>
           {result.generatedSql}
         </p>
       )}

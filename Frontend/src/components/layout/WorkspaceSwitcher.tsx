@@ -35,7 +35,7 @@ export function WorkspaceSwitcher() {
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-label="Switch Databricks workspace"
-        className="flex items-center gap-2 h-9 rounded-lg border border-border bg-white/[0.02] px-3 text-xs font-medium text-text-primary transition-colors hover:border-border-strong hover:bg-white/[0.04]"
+        className="flex items-center gap-2 h-9 rounded-lg border border-border bg-tint-1 px-3 text-xs font-medium text-text-primary transition-colors hover:border-border-strong hover:bg-tint-2"
       >
         <Layers className="size-3.5 text-accent-400" />
         <span className="hidden text-text-tertiary sm:inline">Workspace</span>
@@ -55,7 +55,7 @@ export function WorkspaceSwitcher() {
                 setWorkspace(w.id);
                 setOpen(false);
               }}
-              className="flex w-full items-start gap-2.5 px-3.5 py-2.5 text-left transition-colors hover:bg-white/[0.04]"
+              className="flex w-full items-start gap-2.5 px-3.5 py-2.5 text-left transition-colors hover:bg-tint-2"
             >
               <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center">{w.id === workspace && <Check className="size-4 text-accent-400" />}</span>
               <span>

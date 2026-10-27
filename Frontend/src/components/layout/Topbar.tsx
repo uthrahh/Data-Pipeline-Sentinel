@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Menu, Search } from "lucide-react";
 import { CommandPalette } from "./CommandPalette";
 import { MobileNav } from "./MobileNav";
+import { ThemeToggle } from "./ThemeToggle";
 import { WorkspaceSwitcher } from "./WorkspaceSwitcher";
 
 /** A ticking UTC clock; shows a placeholder until mounted so server and client markup agree. */
@@ -58,7 +59,7 @@ export function Topbar() {
       <button
         onClick={() => setPaletteOpen(true)}
         aria-label="Open command palette"
-        className="group ml-auto flex h-9 w-9 items-center justify-center gap-2.5 rounded-lg border border-border bg-white/[0.02] text-xs text-text-tertiary transition-colors hover:border-border-strong hover:bg-white/[0.04] hover:text-text-secondary sm:w-72 sm:justify-start sm:px-2.5 md:w-80"
+        className="group ml-auto flex h-9 w-9 items-center justify-center gap-2.5 rounded-lg border border-border bg-tint-1 text-xs text-text-tertiary transition-colors hover:border-border-strong hover:bg-tint-2 hover:text-text-secondary sm:w-72 sm:justify-start sm:px-2.5 md:w-80"
       >
         <Search className="size-3.5 shrink-0" />
         <span className="hidden flex-1 text-left sm:block">Search incidents, pages…</span>
@@ -66,6 +67,7 @@ export function Topbar() {
       </button>
 
       <LiveClock />
+      <ThemeToggle />
 
       <MobileNav open={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />

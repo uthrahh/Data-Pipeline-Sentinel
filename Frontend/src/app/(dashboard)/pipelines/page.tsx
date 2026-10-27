@@ -82,12 +82,12 @@ const COLUMNS: Column[] = [
 ];
 
 /** Opaque so scrolling cells never show through the pinned first column. */
-const PINNED = "sticky left-0 z-10 bg-surface group-hover:bg-[#10151c]";
+const PINNED = "sticky left-0 z-10 bg-surface group-hover:bg-surface-hover";
 
 const RunRow = memo(function RunRow({ run, incident }: { run: PipelineRun; incident: Incident | undefined }) {
   const failed = run.executionStatus !== "SUCCESS";
   return (
-    <tr style={{ height: ROW_HEIGHT }} className="group border-b border-border transition-colors hover:bg-white/[0.025]">
+    <tr style={{ height: ROW_HEIGHT }} className="group border-b border-border transition-colors hover:bg-tint-1">
       {COLUMNS.map((c, idx) => (
         <td key={c.label} className={cn("whitespace-nowrap px-4", idx === 0 && [PINNED, failed && "shadow-[inset_3px_0_0_var(--color-danger-500)]"])}>
           {c.render(run, incident)}
