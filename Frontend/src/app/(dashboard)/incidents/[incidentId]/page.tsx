@@ -113,7 +113,7 @@ function Step({
 
 type ItemState = "done" | "active" | "failed" | "pending";
 
-function Checklist({ items }: { items: { text: string; state: ItemState; by?: "ai" | "person" }[] }) {
+function Checklist({ items }: { items: { text: string; state: ItemState }[] }) {
   return (
     <ul className="space-y-2">
       {items.map((item, idx) => (
@@ -128,12 +128,6 @@ function Checklist({ items }: { items: { text: string; state: ItemState; by?: "a
             <Circle className="mt-0.5 size-4 shrink-0 text-border-strong" />
           )}
           <span className={cn("flex-1", item.state === "pending" ? "text-text-tertiary" : item.state === "failed" ? "text-danger-700" : "text-text-primary")}>{item.text}</span>
-          {item.by && (
-            <span className={cn("mt-0.5 flex shrink-0 items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold", item.by === "ai" ? "bg-accent-50 text-accent-700" : "bg-warning-50 text-warning-700")}>
-              {item.by === "ai" ? <Bot className="size-3" /> : <UserRound className="size-3" />}
-              {item.by === "ai" ? "AI" : "Person"}
-            </span>
-          )}
         </li>
       ))}
     </ul>
@@ -268,15 +262,14 @@ export default function IncidentDetailPage() {
 
   /* ---- remediation checklist ---- */
   const remTexts = def.remediationSteps.map((s) => fill(s, ctx));
-  const by: "ai" | "person" = "ai";
-  let remItems: { text: string; state: ItemState; by?: "ai" | "person" }[];
+  let remItems: { text: string; state: ItemState }[];
 
   if (!def.autoRemediable) {
     const escalateIdx = remTexts.length - 1;
     remItems = remTexts.map((text, idx) => {
       const isEmail = idx === escalateIdx;
       const sent = status === "ESCALATED" || status === "RESOLVED";
-      return { text, state: isEmail ? (sent ? "done" : "pending") : "done", by: isEmail ? "person" : "ai" };
+      return { text, state: isEmail ? (sent ? "done" : "pending") : "done" };
     });
   } else {
     const failIdx = Math.max(1, remTexts.length - 2);
@@ -288,11 +281,11 @@ export default function IncidentDetailPage() {
         const at = Math.min(remTexts.length - 1, Math.floor((elapsed / REMEDIATION_RUN_MS) * remTexts.length));
         state = idx < at ? "done" : idx === at ? "active" : "pending";
       } else if (failed) state = idx < failIdx ? "done" : idx === failIdx ? "failed" : "pending";
-      return { text, state, by };
+      return { text, state };
     });
     if (failed) {
       const sent = status === "ESCALATED" || status === "RESOLVED";
-      remItems.push({ text: "Escalate to the pipeline owner and send the email", state: sent ? "done" : "pending", by: "person" });
+      remItems.push({ text: "Escalate to the pipeline owner and send the email", state: sent ? "done" : "pending" });
     }
   }
 
@@ -533,14 +526,7 @@ export default function IncidentDetailPage() {
                     <span className="font-semibold">AI performs this automatically.</span> {def.recommendationText}. No approval is needed — a person is only asked to act if the remediation fails.
                   </p>
                 </div>
-              ) : (
-                <div className="mb-4 flex gap-2.5 rounded-lg border border-accent-500/25 bg-accent-50 px-3.5 py-3 text-sm text-accent-700">
-                  <Bot className="mt-0.5 size-4 shrink-0" />
-                  <p>
-                    <span className="font-semibold">AI performs this after you approve it.</span> {def.recommendationText}.
-                  </p>
-                </div>
-              )}
+              ) : null}
 
               <div className="mb-3 grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-4">
                 <Kv label="Approval" mono>
