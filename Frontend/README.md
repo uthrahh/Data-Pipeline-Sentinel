@@ -28,7 +28,7 @@ The data is built in the browser (the server renders a loading skeleton, `ready:
 
 ```bash
 databricks apps create sentinel-pipeline-frontend -p sentinel-apps
-databricks apps deploy sentinel-pipeline-frontend -p sentinel-apps   # app configured with this repo's `static` branch as its git source
+databricks apps deploy sentinel-pipeline-frontend -p sentinel-apps   # app configured with this repo's `main` branch as its git source
 ```
 
 `app.yaml` builds and starts the app on port 8000 and sets:
@@ -41,21 +41,9 @@ env:
     value: "https://dbc-fa603402-4338.cloud.databricks.com"
   - name: "DATABRICKS_APP_URL"
     value: "https://ai-dataops-assistant-7474652936146529.aws.databricksapps.com"
-  - name: "DATABRICKS_CLIENT_ID"
-    value: "<service principal application id>"
-  - name: "DATABRICKS_CLIENT_SECRET"
-    valueFrom: "backend-client-secret"
 ```
 
-The service principal needs `CAN_USE` on the assistant app (grant it additively with `databricks apps update-permissions`, never `set-permissions`, so the app's existing ACL is preserved). A secret referenced with `valueFrom` must first be attached to the app as a **resource** through the API — a `resources:` block inside `app.yaml` is silently ignored:
-
-```bash
-databricks secrets create-scope sentinel-pipeline -p sentinel-apps
-databricks secrets put-secret sentinel-pipeline backend-client-secret --string-value '<secret>' -p sentinel-apps
-databricks apps update sentinel-pipeline-frontend --json \
-  '{"resources":[{"name":"backend-client-secret","secret":{"scope":"sentinel-pipeline","key":"backend-client-secret","permission":"READ"}}]}' \
-  -p sentinel-apps
-```
+Databricks Apps injects `DATABRICKS_CLIENT_ID` / `DATABRICKS_CLIENT_SECRET` for the app's own service principal, so the proxy needs no secret of its own. That principal needs `CAN_USE` on the assistant app (grant it additively with `databricks apps update-permissions`, never `set-permissions`, so the app's existing ACL is preserved). If Genie answers `Backend auth failed … invalid_client`, a hard-coded client id or secret has gone stale: remove it from `app.yaml` and redeploy.
 
 ## Checks
 
