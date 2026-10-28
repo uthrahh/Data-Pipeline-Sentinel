@@ -14,7 +14,7 @@ import { FAILURE_BY_KEY, FAILURE_TYPES, type FailureKey } from "@/ops/failureTyp
 import { useOps } from "@/ops/store";
 import { INCIDENT_STATUS_STYLES, SEVERITY_STYLES, SLA_STYLES } from "@/ops/styles";
 import type { IncidentStatus } from "@/ops/types";
-import { cn, formatDateTime } from "@/lib/utils";
+import { formatDateTime } from "@/lib/utils";
 
 const PAGE_SIZE = 25;
 
@@ -212,7 +212,7 @@ export default function IncidentsPage() {
         <Card>
           <CardHeader title="Failure types and remediation playbook" description="How Sentinel classifies each failure type and which remediation it applies." />
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[820px] border-collapse text-left text-xs">
+            <table className="w-full min-w-[720px] border-collapse text-left text-xs">
               <thead>
                 <tr className="border-b border-border bg-surface-subtle text-[11px] font-medium text-text-tertiary">
                   <th className="px-5 py-2.5">#</th>
@@ -220,7 +220,6 @@ export default function IncidentsPage() {
                   <th className="px-4 py-2.5">Example Pipeline</th>
                   <th className="px-4 py-2.5">Recommended Action</th>
                   <th className="px-4 py-2.5">Remediation</th>
-                  <th className="px-4 py-2.5">Path</th>
                 </tr>
               </thead>
               <tbody>
@@ -234,11 +233,6 @@ export default function IncidentsPage() {
                     <td className="px-4 py-2.5 text-text-secondary">{f.index % 2 === 1 ? "Material Master Processing US" : "Procurement & Sales Processing US"}</td>
                     <td className="px-4 py-2.5 text-text-secondary">{f.recommendationText}</td>
                     <td className="px-4 py-2.5 text-text-secondary">{f.remediationLabel}</td>
-                    <td className="px-4 py-2.5">
-                      <span className={cn("rounded px-1.5 py-0.5 text-[10px] font-semibold", f.autoRun ? "bg-success-50 text-success-700" : f.autoRemediable ? "bg-info-50 text-info-700" : "bg-warning-50 text-warning-700")}>
-                        {f.autoRun ? "AI automatically" : f.autoRemediable ? "AI after approval" : "A person (escalation)"}
-                      </span>
-                    </td>
                   </tr>
                 ))}
               </tbody>
