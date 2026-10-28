@@ -46,7 +46,7 @@ export function Topbar() {
   }, []);
 
   return (
-    <header className="flex h-16 shrink-0 items-center gap-3 border-b border-border bg-surface-subtle/70 px-4 backdrop-blur-md sm:px-8">
+    <header className="relative z-30 flex h-16 shrink-0 items-center gap-3 border-b border-border bg-surface-subtle/70 px-4 backdrop-blur-md sm:px-8">
       <button
         onClick={() => setMobileNavOpen(true)}
         className="flex size-8 items-center justify-center rounded-md text-text-secondary hover:bg-surface-muted lg:hidden"
