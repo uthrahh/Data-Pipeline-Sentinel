@@ -53,7 +53,7 @@ export function buildEmail(incident: Incident): EmailDraft {
     `Recommended action: ${def.recommendationText}`,
     `Incident: /incidents/${incident.id}`,
     "",
-    "— Sentinel AI Pipeline",
+    "— Sentinel, AI-powered pipeline operations",
   ].join("\n");
 
   return {

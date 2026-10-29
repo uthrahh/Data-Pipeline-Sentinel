@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: { default: "Sentinel · AI Pipeline Operations", template: "%s · Sentinel" },
+  title: { default: "Sentinel · AI-Powered Pipeline Operations", template: "%s · Sentinel" },
   description: "Pipeline observability, AI-assisted investigation and governed remediation for SAP data on Databricks.",
 };
 

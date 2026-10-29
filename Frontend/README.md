@@ -1,4 +1,4 @@
-# Sentinel AI Pipeline — Frontend (`static`)
+# Sentinel — AI-powered pipeline operations (Frontend)
 
 Static demo of the SAP pipeline operations console, hosted as a **Databricks App**. All pages render deterministic demo data; **Genie** (the chat assistant) is the only live integration.
 

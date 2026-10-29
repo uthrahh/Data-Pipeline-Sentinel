@@ -30,7 +30,7 @@ export function Sidebar({ className }: { className?: string }) {
         <BrandMark />
         <div className="leading-tight">
           <p className="text-[15px] font-semibold tracking-[-0.02em] text-text-primary">Sentinel</p>
-          <p className="text-[10px] font-medium tracking-wide text-text-tertiary">AI pipeline operations</p>
+          <p className="text-[10px] font-medium tracking-wide text-text-tertiary">AI-powered pipeline operations</p>
         </div>
       </div>
       <SidebarNav />
